@@ -1,0 +1,55 @@
+{
+  
+  "type": "FeatureCollection",
+  "features": [
+    
+    {
+      "type": "Feature",
+      "properties": { "regionId": "tokyo-shinagawa", "name": "品川" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [139.0, 35.0],
+            [140.0, 35.0],
+            [140.0, 36.0],
+            [139.0, 36.0],
+            [139.0, 35.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "regionId": "tokyo-nerima", "name": "練馬" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [141.0, 35.0],
+            [142.0, 35.0],
+            [142.0, 36.0],
+            [141.0, 36.0],
+            [141.0, 35.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "regionId": "tokyo-adachi", "name": "足立" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [139.8, 33.5],
+            [140.8, 33.5],
+            [140.8, 34.5],
+            [139.8, 34.5],
+            [139.8, 33.5]
+          ]
+        ]
+      }
+    }
+  ]
+}

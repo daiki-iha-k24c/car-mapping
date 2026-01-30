@@ -1,0 +1,10 @@
+[
+  { "id": "tokyo-shinagawa", "name": "品川", "pref": "東京都", "areaOrder": 40 },
+  { "id": "tokyo-nerima", "name": "練馬", "pref": "東京都", "areaOrder": 40 },
+  { "id": "tokyo-adachi", "name": "足立", "pref": "東京都", "areaOrder": 40 },
+  { "id": "tokyo-tama", "name": "多摩", "pref": "東京都", "areaOrder": 40 },
+
+  { "id": "kanagawa-yokohama", "name": "横浜", "pref": "神奈川県", "areaOrder": 41 },
+  { "id": "kanagawa-kawasaki", "name": "川崎", "pref": "神奈川県", "areaOrder": 41 },
+  { "id": "kanagawa-syonan", "name": "湘南", "pref": "神奈川県", "areaOrder": 41 }
+]
