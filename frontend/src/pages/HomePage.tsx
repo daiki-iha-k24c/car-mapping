@@ -151,15 +151,12 @@ export default function HomePage() {
                     <h2 style={{ margin: 0 }}>ナンバープレート</h2>
                     <div className="small">地域を記録して、地図を塗りつぶす</div>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <button className="btn" onClick={() => setHelpOpen(true)}>
-                        ⓘ遊び方
-                    </button>
 
-                    <Link to="/regions" className="btn">
-                        地域一覧
-                    </Link>
+                <div className="header-actions">
+                    <button className="btn" onClick={() => setHelpOpen(true)}>ⓘ遊び方</button>
+                    <Link to="/regions" className="btn">地域一覧</Link>
                 </div>
+
 
             </div>
 

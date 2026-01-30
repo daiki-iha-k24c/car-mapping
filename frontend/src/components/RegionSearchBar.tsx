@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Region } from "../lib/region";
+import "../search.css";
 
 type RegionWithReading = Region & { reading?: string };
 
@@ -34,6 +35,7 @@ export default function RegionSearchBar({ regions, onSelectRegion }: Props) {
   return (
     <div style={{ position: "relative" }}>
       <input
+        className="search-input"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="地域を検索（例：し → 品川）"

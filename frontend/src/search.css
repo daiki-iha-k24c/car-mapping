@@ -45,3 +45,8 @@
 .search_container ::placeholder {
   color: #3879D9;
 }
+.search-input {
+  font-size: 16px;      /* ←これが最重要 */
+  line-height: 1.2;
+}
+
