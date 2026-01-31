@@ -37,27 +37,23 @@ export default function RegionPlatesPage() {
           }}
         >
           {plates.map((p) => {
+            const safeSvg = p.renderSvg.replace(
+              /viewBox="0 0"/g,
+              'viewBox="0 0 320 180"'
+            );
+
             const src = `data:image/svg+xml;base64,${btoa(
-              unescape(encodeURIComponent(p.renderSvg))
+              unescape(encodeURIComponent(safeSvg))
             )}`;
 
             return (
-              <div
-                key={p.id}
-                style={{
-                  borderRadius: 12,
-                  padding: 10,
-                  border: "1px solid #e5e7eb",
-                  background: "#fff",
-                  overflow: "hidden",
-                  display: "flex",
-                  justifyContent: "center",
-                }}
-              >
+              <div key={p.id}>
                 <img className="plate-img" src={src} alt="" loading="lazy" />
               </div>
             );
           })}
+
+
 
         </div>
 
