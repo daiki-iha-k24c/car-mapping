@@ -20,6 +20,11 @@ export default function PrefModal({
 }: Props) {
   const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const fixSvgViewBox = (svg: string) =>
+    svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
+
+  const toSvgDataUrlBase64 = (svg: string) =>
+    `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
 
   if (!open || !prefName) return null;
 
@@ -66,101 +71,89 @@ export default function PrefModal({
             <div style={{ opacity: 0.7 }}>この都道府県の地域データがありません。</div>
           ) : (
             regionsInPref.map((r) => {
-              const plates = listPlatesByRegionId(r.id);
-              const count = plates.length;
-              const discovered = count > 0;
-              const isOpen = expandedId === r.id;
+              const regionId = r.id ?? r.regionId ?? r.code; // どれかに合わせて
+              const regionName = r.name ?? r.regionName ?? r.label ?? "地域";
+
+              const found = Boolean(recordMap?.[regionId]); // 既存の判定があれば差し替えOK
+              const isOpen = expandedId === regionId;
+
+              // 展開時だけプレートを読む（軽くなる）
+              const plates = isOpen ? listPlatesByRegionId(regionId) : [];
 
               return (
-                <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #eee" }}>
-                  {/* 行本体：ここを押せるようにする */}
-                  <button
-                    type="button"
-                    disabled={!discovered}
-                    onClick={() => {
-                      if (!discovered) return;
-                      setExpandedId((prev) => (prev === r.id ? null : r.id));
-                    }}
+                <div
+                  key={regionId}
+                  style={{
+                    padding: "12px 0",
+                    borderBottom: "1px solid #eee",
+                  }}
+                >
+                  {/* 行ヘッダー */}
+                  <div
                     style={{
-                      width: "100%",
                       display: "flex",
                       alignItems: "center",
-                      gap: 10,
-                      border: "none",
-                      background: "transparent",
-                      padding: "6px 4px",
-                      textAlign: "left",
-                      cursor: discovered ? "pointer" : "default",
-                      opacity: discovered ? 1 : 0.55,
+                      justifyContent: "space-between",
+                      gap: 12,
+                      cursor: "pointer",
                     }}
+                    onClick={() => setExpandedId(isOpen ? null : regionId)}
                   >
-                    {/* 左：地域名 */}
-                    <div style={{ fontWeight: 700 }}>{r.name}</div>
+                    <div style={{ fontWeight: 700 }}>{regionName}</div>
 
-                    {/* 右：ステータス */}
-                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span
                         style={{
                           fontSize: 12,
-                          padding: "4px 10px",
+                          padding: "6px 10px",
                           borderRadius: 999,
-                          border: "1px solid #eee",
-                          whiteSpace: "nowrap",
+                          border: "1px solid #e5e7eb",
+                          opacity: found ? 1 : 0.5,
+                          background: found ? "#fff" : "#f8fafc",
                         }}
                       >
-                        {discovered ? `発見済み（${count}）` : "未発見"}
+                        {found ? `発見済み（${plates.length}）` : "未発見"}
                       </span>
-
-                      {/* 右端：開閉アイコン（文字でOK） */}
-                      <span style={{ fontSize: 12, opacity: 0.7 }}>
-                        {discovered ? (isOpen ? "▲" : "▼") : ""}
-                      </span>
+                      <span style={{ opacity: 0.7 }}>{isOpen ? "▲" : "▼"}</span>
                     </div>
-                  </button>
+                  </div>
 
-                  {/* 展開エリア */}
+                  {/* 展開中の中身 */}
                   {isOpen && (
-                    <div
-                      style={{
-                        marginTop: 10,
-                        padding: 10,
-                        borderRadius: 12,
-                        background: "#fafafa",
-                        border: "1px solid #eee",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                          gap: 10,
-                        }}
-                      >
-                        {plates.map((p) => (
-                          <div
-                            key={p.id}
-                            style={{
-                              borderRadius: 12,
-                              padding: 8,
-                              background: "#fff",
-                              border: "1px solid #e5e7eb",
-                              overflow: "hidden",
-                            }}
-                          >
-                            <div className="plate-svg-wrap" dangerouslySetInnerHTML={{ __html: p.renderSvg }} />
-                          </div>
-                        ))}
+                    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                      {plates.length === 0 ? (
+                        <div style={{ opacity: 0.6, fontSize: 13 }}>まだ登録がありません</div>
+                      ) : (
+                        plates.map((p: any) => {
+                          const safeSvg = fixSvgViewBox(p.renderSvg);
+                          const src = toSvgDataUrlBase64(safeSvg);
 
-                      </div>
+                          return (
+                            <div
+                              key={p.id}
+                              style={{
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 12,
+                                padding: 10,
+                                background: "#fff",
+                                overflow: "hidden",
+                                display: "flex",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <img className="plate-img" src={src} alt="" loading="lazy" />
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   )}
                 </div>
               );
             })
-
-
           )}
         </div>
+
 
       </div>
     </div>

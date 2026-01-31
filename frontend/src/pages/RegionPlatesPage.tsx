@@ -32,23 +32,35 @@ export default function RegionPlatesPage() {
           style={{
             marginTop: 14,
             display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
             gap: 12,
           }}
         >
-          {plates.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                borderRadius: 12,
-                padding: 10,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-              }}
-              dangerouslySetInnerHTML={{ __html: p.renderSvg }}
-            />
-          ))}
+          {plates.map((p) => {
+            const src = `data:image/svg+xml;base64,${btoa(
+              unescape(encodeURIComponent(p.renderSvg))
+            )}`;
+
+            return (
+              <div
+                key={p.id}
+                style={{
+                  borderRadius: 12,
+                  padding: 10,
+                  border: "1px solid #e5e7eb",
+                  background: "#fff",
+                  overflow: "hidden",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <img className="plate-img" src={src} alt="" loading="lazy" />
+              </div>
+            );
+          })}
+
         </div>
+
       )}
     </div>
   );

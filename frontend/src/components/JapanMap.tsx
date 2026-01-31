@@ -12,8 +12,8 @@ const PREF_BY_CODE: Record<string, string> = {
 };
 
 function fillByStatus(status: PrefStatus) {
-  if (status === "complete") return "#00bcd4";
-  if (status === "partial") return "#99e6f0";
+  if (status === "complete") return "#d7003a";
+  if (status === "partial") return "#fef263";
   return "#e5e7eb";
 }
 

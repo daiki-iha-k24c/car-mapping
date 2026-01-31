@@ -27,8 +27,12 @@ export function renderPlateSvg(params: {
   const textColor = fg[params.color];
 
   return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ">
-  <rect x="6" y="6" width="${width - 12}" height="${height - 12}" rx="18" fill="${background}" stroke="#222" stroke-width="4"/>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${width}" height="${height}"
+     viewBox="0 0 ${width} ${height}"
+     preserveAspectRatio="xMidYMid meet">
+  <rect x="6" y="6" width="${width - 12}" height="${height - 12}"
+        rx="18" fill="${background}" stroke="#222" stroke-width="4"/>
   <text x="28" y="52" font-size="34" font-family="sans-serif" fill="${textColor}">${esc(params.regionName)}</text>
   <text x="${width - 28}" y="52" text-anchor="end" font-size="34" font-family="sans-serif" fill="${textColor}">${esc(params.classNumber)}</text>
   <text x="28" y="106" font-size="44" font-family="sans-serif" fill="${textColor}">${esc(params.kana)}</text>
