@@ -11,6 +11,49 @@ import { PLATE_REGIONS } from "../data/plateRegions";
 import HelpModal from "../components/HelpModal";
 import PlateRegisterModal from "../components/PlateRegisterModal";
 
+import PlateScanModal from "../components/PlateScanModal";
+import type { Plate, PlateColor } from "../storage/plates";
+import { addPlate, listPlatesByRegionId } from "../storage/plates";
+import { renderPlateSvg } from "../svg/renderPlateSvg";
+
+function normalizeSerial(s: string) {
+    const t = s.trim().replace(/[‐-‒–—−ー－]/g, "-");
+    const digits = t.replace(/\D/g, "");
+    if (digits.length === 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    return t;
+}
+
+function fixSvgViewBox(svg: string) {
+    return svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
+}
+
+function normRegionName(s: string) {
+    return (s || "").trim().replace(/\s+/g, "");
+}
+
+// まずは「完全一致 or 部分一致」で十分回る（あとで辞書照合に進化できる）
+function findRegionByName(name: string): Region | null {
+    const key = normRegionName(name);
+    if (!key) return null;
+
+    // 完全一致
+    const exact = regions.find((r) => normRegionName(r.name) === key);
+    if (exact) return exact;
+
+    // 部分一致（OCRが余計な文字拾うことある）
+    const partial = regions.find((r) => normRegionName(r.name).includes(key) || key.includes(normRegionName(r.name)));
+    return partial ?? null;
+}
+
+function isDuplicate(regionId: string, classNumber: string, kana: string, serial: string) {
+    const list = listPlatesByRegionId(regionId);
+    return list.some(
+        (p) =>
+            p.classNumber === classNumber &&
+            p.kana === kana &&
+            p.serial === serial
+    );
+}
 
 
 export default function HomePage() {
@@ -19,8 +62,8 @@ export default function HomePage() {
     const [picked, setPicked] = useState<Region | null>(null);
     const [plateOpen, setPlateOpen] = useState(false);
     const [plateRegion, setPlateRegion] = useState<Region | null>(null);
-
-
+    const [scanOpen, setScanOpen] = useState(false);
+    const [scanMsg, setScanMsg] = useState<string>("");
     const [prefOpen, setPrefOpen] = useState(false);
     const [pickedPref, setPickedPref] = useState<string | null>(null);
     const [helpOpen, setHelpOpen] = useState(false);
@@ -162,10 +205,20 @@ export default function HomePage() {
 
             <div className="stack">
                 {/* ✅ ここが予測検索バー（選んだら既存のCompleteModalへ） */}
-                <RegionSearchBar
-                    regions={regionsWithReading}
-                    onSelectRegion={openPlate}
-                />
+                <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                    <button className="btn" style={{ width: "100%" }} onClick={() => setScanOpen(true)}>
+                        📷 スキャンして登録
+                    </button>
+
+                    {/* 検索バーいらないなら、検索UIを丸ごと消してOK */}
+                    {/* <button className="btn" onClick={() => ...}>他のボタン</button> */}
+                </div>
+
+                {scanMsg && (
+                    <div style={{ marginBottom: 12, fontSize: 13, opacity: 0.85 }}>
+                        {scanMsg}
+                    </div>
+                )}
 
 
                 <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
@@ -201,6 +254,67 @@ export default function HomePage() {
                 open={helpOpen}
                 onClose={() => setHelpOpen(false)}
                 onClearAll={handleClearAll}
+            />
+
+            {/* ✅ スキャンモーダル（ホームから開く） */}
+            <PlateScanModal
+                open={scanOpen}
+                onClose={() => setScanOpen(false)}
+                onApply={(r, rawText) => {
+                    // 1) 地域名 → Region を特定
+                    const region = findRegionByName(r.regionName);
+                    if (!region) {
+                        alert(
+                            `地域名が特定できなかった…\nOCR結果:「${r.regionName}」\n\n生テキスト:\n${rawText}`
+                        );
+                        return;
+                    }
+
+                    // 2) 値の整形
+                    const classNumber = (r.classNumber || "").trim();
+                    const kana = (r.kana || "").trim();
+                    const serial = normalizeSerial(r.serial || "");
+
+                    // 3) 最低限バリデーション（ホーム自動登録なので甘め）
+                    if (!/^\d{2,3}$/.test(classNumber) || !kana || !/^\d{2}-\d{2}$/.test(serial)) {
+                        alert(
+                            `読み取りが不完全かも。\n\n地域: ${region.name}\n分類: ${classNumber}\nかな: ${kana}\n番号: ${serial}\n\n生テキスト:\n${rawText}`
+                        );
+                        return;
+                    }
+
+                    // 4) 重複チェック
+                    if (isDuplicate(region.id, classNumber, kana, serial)) {
+                        setScanMsg(`すでに登録済み：${region.name} ${classNumber} ${kana} ${serial}`);
+                        return;
+                    }
+
+                    // 5) SVG生成（色は一旦白固定。後で認識/選択もできる）
+                    const color: PlateColor = "white";
+                    const svg = fixSvgViewBox(
+                        renderPlateSvg({
+                            regionName: region.name,
+                            classNumber,
+                            kana,
+                            serial,
+                            color,
+                        })
+                    );
+
+                    const plate: Plate = {
+                        id: crypto.randomUUID(),
+                        regionId: region.id,
+                        classNumber,
+                        kana,
+                        serial,
+                        color,
+                        renderSvg: svg,
+                        createdAt: new Date().toISOString(),
+                    };
+
+                    addPlate(plate);
+                    setScanMsg(`登録しました：${region.name} ${classNumber} ${kana} ${serial}`);
+                }}
             />
 
         </div>
