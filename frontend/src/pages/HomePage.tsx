@@ -171,7 +171,22 @@ export default function HomePage() {
       <div className="stack">
         {/* ✅ 新仕様：ホームに「ナンバープレートを登録」ボタン（カメラ削除） */}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-          <button className="btn" style={{ width: "100%" }} onClick={() => setPlateOpen(true)}>
+          <button className="btn" 
+          style={{ 
+              width: "100%",
+              height: 52,
+              borderRadius: 14,
+              border: "none",
+              fontSize: 18,
+              fontWeight: "bold",
+              textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
+              color: "#fff",
+              backgroundColor:"[object object]",
+              boxShadow: "0 6px 16px #a2d7dd",
+              backgroundImage:"radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
+              opacity: 0.7 ,    
+          }} 
+          onClick={() => setPlateOpen(true)}>
             ナンバープレートを登録
           </button>
         </div>
