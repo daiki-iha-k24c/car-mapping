@@ -303,7 +303,7 @@ export function renderPlateSvg({ regionName, classNumber, kana, serial, color }:
 
   // ✅ 太さ：スマホで太く見える差の吸収（900→600/700へ）
   const weightNormal = 600; // 地域・分類・かな
-  const weightSerial = 700; // 番号は少し強め
+  const weightSerial = 600; // 番号は少し強め
 
   return `
 <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
