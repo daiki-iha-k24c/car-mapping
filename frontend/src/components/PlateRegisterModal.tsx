@@ -19,10 +19,7 @@ type FormState = {
   kana: string;
   color: PlateColor | "";
 
-  d1: string; // 0-9 or ・
-  d2: string; // 0-9 or ・
-  d3: string; // 0-9 or ・
-  d4: string; // 0-9
+  serialRaw: string; // ✅ 数字だけ（最大4桁）例: "3" "36" "364" "3645"
 };
 
 function fixSvgViewBox(svg: string) {
@@ -34,9 +31,6 @@ function isDuplicate(regionId: string, classNumber: string, kana: string, serial
   const list = listPlatesByRegionId(regionId);
   return list.some((p) => p.classNumber === classNumber && p.kana === kana && p.serial === serial);
 }
-
-const DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-const DIGITS_WITH_DOT = ["・", ...DIGITS];
 
 // 分類番号（最低限：現実に多いもの + 汎用）
 // ※もっと厳密にしたければ後で地域/種別に合わせて絞れる
@@ -66,20 +60,35 @@ const COLORS: Array<{ label: string; value: PlateColor }> = [
   { label: "ピンク", value: "pink" },
 ];
 
-function buildSerial(d1: string, d2: string, d3: string, d4: string) {
-  const hasDot = [d1, d2, d3].some((x) => x === "・");
-  if (hasDot) {
-    // ・・・x / ・・xx / ・xxx
-    return `${d1}${d2}${d3}${d4}`;
-  }
-  // xx-xx
-  return `${d1}${d2}-${d3}${d4}`;
+function digitsOnly4(raw: string) {
+  // 数字だけ抽出して末尾4桁だけ残す（ペースト対策）
+  return raw.replace(/\D/g, "").slice(-4);
 }
 
-function serialPreview(d1: string, d2: string, d3: string, d4: string) {
-  if (!d1 || !d2 || !d3 || !d4) return "—";
-  return buildSerial(d1, d2, d3, d4);
+// プレビュー用：右詰めで「・」埋め（例: "3"→"・・・3"）
+function serialPreviewRightDots(raw: string) {
+  const d = digitsOnly4(raw);
+  if (!d) return "";
+
+  // ✅ 4桁揃ったら 12-34 にしてプレビューもハイフン表示
+  if (d.length === 4) return `${d.slice(0, 2)}-${d.slice(2)}`;
+
+  // ✅ 途中は右詰め「・」埋め（例: "3"→"・・・3"）
+  return d.padStart(4, "・");
 }
+
+// 保存用：4桁そろったら "12-34"
+function serialForSave(raw: string) {
+  const d = digitsOnly4(raw);
+  if (!d) return ""; // 0桁は不可
+
+  // 4桁はハイフン形式
+  if (d.length === 4) return `${d.slice(0, 2)}-${d.slice(2)}`;
+
+  // 1〜3桁は右詰め点埋め（・・・1 / ・・12 / ・123）
+  return d.padStart(4, "・");
+}
+
 
 function colorLabel(c: PlateColor | "") {
   const hit = COLORS.find((x) => x.value === c);
@@ -93,11 +102,7 @@ function initialState(): FormState {
     classNumber: "",
     kana: "",
     color: "",
-
-    d1: "",
-    d2: "",
-    d3: "",
-    d4: "",
+    serialRaw: "", // ✅
   };
 }
 
@@ -160,7 +165,7 @@ export default function PlateRegisterModal({
       .map((r) => ({ label: r.name, value: r.id }));
   }, [regions]);
 
-  const serial = useMemo(() => serialPreview(v.d1, v.d2, v.d3, v.d4), [v.d1, v.d2, v.d3, v.d4]);
+  const serial = useMemo(() => serialPreviewRightDots(v.serialRaw), [v.serialRaw]);
 
   const canSubmit =
     !!v.regionId &&
@@ -168,31 +173,23 @@ export default function PlateRegisterModal({
     !!v.classNumber &&
     !!v.kana &&
     !!v.color &&
-    !!v.d1 &&
-    !!v.d2 &&
-    !!v.d3 &&
-    !!v.d4;
+    digitsOnly4(v.serialRaw).length >= 1; // ✅ 4桁必須
 
   const isPristine =
     !v.regionId &&
     !v.classNumber &&
     !v.kana &&
     !v.color &&
-    !v.d1 &&
-    !v.d2 &&
-    !v.d3 &&
-    !v.d4;
+    !v.serialRaw; // ✅
 
   const isDirty = !isPristine;
-
 
   const previewSvg = useMemo(() => {
     const regionName = v.regionName || "";
     const classNumber = v.classNumber || "";
     const kana = v.kana || "";
 
-    // serial は途中なら "・・—" みたいにしないで "—" にする
-    const serialForSvg = serial === "—" ? "—" : serial;
+    const serialForSvg = serial; // ✅ "・・・3" などをそのまま渡す
 
     const c: PlateColor = (v.color || "white") as PlateColor;
 
@@ -206,6 +203,7 @@ export default function PlateRegisterModal({
       })
     );
   }, [v.regionName, v.classNumber, v.kana, v.color, serial]);
+
 
 
   if (!open) return null;
@@ -228,14 +226,15 @@ export default function PlateRegisterModal({
   };
 
   const submit = () => {
-    if (!canSubmit || done) return;
+  if (!canSubmit || done) return;
 
-    const serialValue = buildSerial(v.d1, v.d2, v.d3, v.d4);
+  const serialValue = serialForSave(v.serialRaw);
+  if (!serialValue) return; // ここならOK（早期returnしてもUIは消えない）
 
-    if (isDuplicate(v.regionId, v.classNumber, v.kana, serialValue)) {
-      setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
-      return;
-    }
+  if (isDuplicate(v.regionId, v.classNumber, v.kana, serialValue)) {
+    setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
+    return;
+  }
 
     const color = v.color as PlateColor;
 
@@ -270,7 +269,9 @@ export default function PlateRegisterModal({
     <div
       role="dialog"
       aria-modal="true"
-      onClick={closeAll}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) closeAll(); // ✅ 背景クリックのみ閉じる
+      }}
       style={{
         position: "fixed",
         inset: 0,
@@ -282,6 +283,7 @@ export default function PlateRegisterModal({
         zIndex: 2000,
       }}
     >
+
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
@@ -380,38 +382,33 @@ export default function PlateRegisterModal({
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 14, color: "#111827", marginBottom: 8 }}>ナンバー</div>
 
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <SelectMini
-              value={v.d1}
-              onChange={(x) => setV((p) => ({ ...p, d1: x }))}
-              options={DIGITS_WITH_DOT}
-              placeholder="—"
-            />
-            <SelectMini
-              value={v.d2}
-              onChange={(x) => setV((p) => ({ ...p, d2: x }))}
-              options={DIGITS_WITH_DOT}
-              placeholder="—"
-            />
-            <div style={{ fontWeight: 900, opacity: 0.55 }}>—</div>
-            <SelectMini
-              value={v.d3}
-              onChange={(x) => setV((p) => ({ ...p, d3: x }))}
-              options={DIGITS_WITH_DOT}
-              placeholder="—"
-            />
-            <SelectMini
-              value={v.d4}
-              onChange={(x) => setV((p) => ({ ...p, d4: x }))}
-              options={DIGITS}
-              placeholder="—"
-            />
-          </div>
+          <input
+            value={v.serialRaw}
+            onChange={(e) => {
+              const d = digitsOnly4(e.target.value);
+              setV((p) => ({ ...p, serialRaw: d }));
+            }}
+            type="tel"
+            inputMode="numeric"
+            placeholder="3645"
+            style={{
+              width: "100%",
+              height: 44,
+              borderRadius: 12,
+              border: "2px solid #e5e7eb",
+              padding: "0 12px",
+              fontSize: 16,
+              outline: "none",
+              background: "#fff",
+              boxSizing: "border-box",
+            }}
+          />
 
           <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280" }}>
-            表示: <b>{serial}</b>（左1〜3桁は「・」を選べます）
+            表示: <b>{serial}</b>（右詰めで自動表示）
           </div>
         </div>
+
 
         {dupMsg && (
           <div style={{ marginTop: 12, fontSize: 13, color: "#b45309" }}>

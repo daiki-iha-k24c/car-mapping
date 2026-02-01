@@ -181,7 +181,6 @@ export default function HomePage() {
               fontWeight: "bold",
               textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
               color: "#fff",
-              backgroundColor:"[object object]",
               boxShadow: "0 6px 16px #a2d7dd",
               backgroundImage:"radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
               opacity: 0.7 ,    
@@ -190,6 +189,8 @@ export default function HomePage() {
             ナンバープレートを登録
           </button>
         </div>
+
+        
 
         <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
 

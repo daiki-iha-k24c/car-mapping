@@ -59,7 +59,7 @@ export default function PrefModal({
         {/* ヘッダー */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ margin: 0 }}>
-            {prefName} ({regionsInPref.length})
+            {prefName} 
           </h3>
           <button className="btn" onClick={onClose}>
             閉じる
