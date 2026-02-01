@@ -10,6 +10,7 @@ import { PLATE_REGIONS } from "../data/plateRegions";
 import HelpModal from "../components/HelpModal";
 import PlateRegisterModal from "../components/PlateRegisterModal";
 
+
 function normRegionName(s: string) {
   return (s || "").trim().replace(/\s+/g, "");
 }
@@ -32,6 +33,7 @@ export default function HomePage() {
   const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>(() => loadRecords());
   const [modalOpen, setModalOpen] = useState(false);
   const [picked, setPicked] = useState<Region | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [prefOpen, setPrefOpen] = useState(false);
   const [pickedPref, setPickedPref] = useState<string | null>(null);
@@ -159,20 +161,54 @@ export default function HomePage() {
         </div>
 
         <div className="header-actions">
-          <button className="btn" onClick={() => setHelpOpen(true)}>
-            ⓘ遊び方
-          </button>
-          <Link to="/regions" className="btn">
-            地域一覧
-          </Link>
+          {/* PC用
+          <div className="actions-desktop">
+            <button className="btn" onClick={() => setHelpOpen(true)}>ⓘ遊び方</button>
+            <Link to="/regions" className="btn">地域一覧</Link>
+          </div> */}
+
+          {/* モバイル用：ハンバーガー */}
+          <div className="actions-mobile">
+            <button
+              className="btn"
+              aria-label="メニュー"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              ☰
+            </button>
+
+            {menuOpen && (
+              <div className="menu-popover" role="menu">
+                <Link
+                  to="/regions"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  ◎地域一覧
+                </Link>
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setHelpOpen(true);
+                  }}
+                >
+                  ⓘ 遊び方
+                </button>
+
+                
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
 
       <div className="stack">
         {/* ✅ 新仕様：ホームに「ナンバープレートを登録」ボタン（カメラ削除） */}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-          <button className="btn" 
-          style={{ 
+          <button className="btn"
+            style={{
               width: "100%",
               height: 52,
               borderRadius: 14,
@@ -182,15 +218,15 @@ export default function HomePage() {
               textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
               color: "#fff",
               boxShadow: "0 6px 16px #a2d7dd",
-              backgroundImage:"radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
-              opacity: 0.7 ,    
-          }} 
-          onClick={() => setPlateOpen(true)}>
+              backgroundImage: "radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
+              opacity: 0.7,
+            }}
+            onClick={() => setPlateOpen(true)}>
             ナンバープレートを登録
           </button>
         </div>
 
-        
+
 
         <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
 

@@ -390,7 +390,7 @@ export default function PlateRegisterModal({
             }}
             type="tel"
             inputMode="numeric"
-            placeholder="3645"
+            placeholder="例）1234"
             style={{
               width: "100%",
               height: 44,

@@ -23,13 +23,72 @@ a { color: inherit; text-decoration: none; }
   padding: 16px;
 }
 
-.header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+/* ヘッダー：スマホでも崩れない */
+.header{
+  display:flex;
+  align-items:center;        /* baselineは崩れやすいのでcenter推奨 */
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+
+  flex-wrap:nowrap;          /* ✅ 絶対折り返さない */
 }
+
+/* 左側タイトルブロックは縮められるように */
+.header > div:first-child{
+  min-width:0;               /* ✅ これが超重要 */
+}
+
+/* 右側は常に右寄せ・折り返し禁止 */
+.header-actions{
+  position:relative;         /* ✅ popoverの基準 */
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:nowrap;
+  white-space:nowrap;
+  gap:8px;
+}
+
+/* 今はactions-mobileだけ使ってるので表示を保証 */
+.actions-mobile{
+  display:block;
+  position:relative;         /* ✅ popoverの基準をここにしてもOK */
+}
+
+/* メニュー（popover） */
+.menu-popover{
+  position:absolute;
+  right:0;
+  top:52px;                  /* ボタンの下に */
+  width:190px;
+  background:#f9fafb;              /* ← 背景 */
+  border:1px solid #e5e7eb;        /* ← 枠線 */
+  border-radius:12px;
+  box-shadow:0 12px 30px rgba(0,0,0,0.18);
+  overflow:hidden;
+  z-index:99999;
+}
+
+.menu-item{
+  display:block;
+  width:100%;
+  text-align:left;
+  padding:12px 12px;
+  background:#badcad;
+  border:none;
+  cursor:pointer;
+  font-size:15px;
+  font-weight: 600;
+  color:var(--text);
+  text-decoration:none;
+}
+
+.menu-item:hover{
+  background:#f3f4f6;
+}
+
+
 
 .card {
   background: var(--card);
