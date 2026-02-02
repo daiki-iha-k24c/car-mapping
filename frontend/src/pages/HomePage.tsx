@@ -44,7 +44,6 @@ export default function HomePage() {
   const [prefOpen, setPrefOpen] = useState(false);
   const [pickedPref, setPickedPref] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-
   const { userId, loading } = useUser();
   const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
 
@@ -54,6 +53,23 @@ export default function HomePage() {
 
   // ✅ localStorage分離に使う userId（Supabase user.id）
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  const [me, setMe] = useState<{ username: string | null; avatar_url: string | null } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("username, avatar_url")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      setMe(data ?? null);
+    })();
+  }, []);
 
   // ✅ 地図達成の記録
 
@@ -206,6 +222,42 @@ export default function HomePage() {
         </div>
 
         <div className="header-actions">
+          {/* ✅ 追加：ユーザー表示 */}
+          {me?.username && (
+            <button
+              type="button"
+              className="header-user"
+              onClick={() => navigate("/me")}
+              aria-label="ユーザーページへ"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginRight: 8,
+                background: "ffffff",
+                padding: "8px",
+                cursor: "pointer",
+                border: "1px solid black",
+                borderRadius: "10px",
+              }}
+            >
+              <img
+                src={me.avatar_url || "/avatar-default.png"}
+                alt="avatar"
+                width={30}
+                height={30}
+                style={{
+                  borderRadius: "999px",
+                  objectFit: "cover",
+                  border: "1px solid rgba(0,0,0,0.15)",
+                }}
+              />
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                {me.username}
+              </span>
+            </button>
+          )}
+
           <div className="actions-mobile">
             <button
               className="btn"
@@ -248,14 +300,6 @@ export default function HomePage() {
                   👥 フレンド
                 </Link>
 
-
-                <Link
-                  to="/me"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  👤 ユーザーページ
-                </Link>
 
                 <button
                   className="menu-item"
@@ -338,6 +382,6 @@ export default function HomePage() {
         onClose={() => setHelpOpen(false)}
         onClearAll={handleClearAll}
       />
-    </div>
+    </div >
   );
 }

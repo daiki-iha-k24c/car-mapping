@@ -4,9 +4,39 @@ import { useNavigate } from "react-router-dom";
 
 export default function OnboardingPage() {
     const [name, setName] = useState("");
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [err, setErr] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const navigate = useNavigate();
+
+    const handleAvatarChange = (file: File | null) => {
+        setErr(null);
+
+        if (!file) {
+            setAvatarUrl(null);
+            return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+            setErr("画像ファイルを選んでね");
+            return;
+        }
+
+        if (file.size > 512 * 1024) {
+            setErr("画像サイズは512KB以下にしてね");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = typeof reader.result === "string" ? reader.result : null;
+            setAvatarUrl(result);
+        };
+        reader.onerror = () => {
+            setErr("画像の読み込みに失敗しました");
+        };
+        reader.readAsDataURL(file);
+    };
 
     async function save() {
         setErr(null);
@@ -35,10 +65,11 @@ export default function OnboardingPage() {
 
             console.log("[onboarding] userId=", user.id);
 
-            // ✅ profiles 保存
+             // ✅ profiles 保存
             const { error } = await supabase.from("profiles").upsert({
                 user_id: user.id,
                 username,
+                avatar_url: avatarUrl,
             });
 
             console.log("[onboarding] upsert error:", error ?? "none");
@@ -61,7 +92,7 @@ export default function OnboardingPage() {
             // ✅ 保存できたかを再取得で確認
             const { data: p2, error: e2 } = await supabase
                 .from("profiles")
-                .select("username")
+                .select("username, avatar_url")
                 .eq("user_id", user.id)
                 .maybeSingle();
 
@@ -80,9 +111,55 @@ export default function OnboardingPage() {
 
 
     return (
-        <div style={{ padding: 16 }}>
+         <div style={{ padding: 16 }}>
             <h2>ユーザーネーム登録</h2>
             <p>初回だけ入力してね（後から変更できます）</p>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "12px 0" }}>
+                <div
+                    style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: "50%",
+                        border: "1px solid #e5e7eb",
+                        background: "#f3f4f6",
+                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 24,
+                        fontWeight: 700,
+                        color: "#6b7280",
+                    }}
+                >
+                    {avatarUrl ? (
+                        <img src={avatarUrl} alt="アイコン" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                        <span>{name.trim().slice(0, 1) || "?"}</span>
+                    )}
+                </div>
+                <label style={{ display: "block" }}>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)}
+                        style={{ display: "none" }}
+                    />
+                    <span
+                        style={{
+                            display: "inline-block",
+                            padding: "8px 12px",
+                            borderRadius: 10,
+                            border: "1px solid #ddd",
+                            background: "#fff",
+                            cursor: "pointer",
+                            fontSize: 13,
+                        }}
+                    >
+                        アイコンを選ぶ
+                    </span>
+                </label>
+            </div>
 
             <input
                 value={name}

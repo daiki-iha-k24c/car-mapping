@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 
 
-type Profile = { username: string };
+type Profile = { username: string; avatar_url: string | null };
 
 function validateUsername(s: string) {
   const v = s.trim();
@@ -17,10 +17,11 @@ export default function MePage() {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<string>("");
   const [draft, setDraft] = useState<string>("");
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
+  const [draftAvatar, setDraftAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function MePage() {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, avatar_url")
         .eq("user_id", user.id)
         .maybeSingle<Profile>();
 
@@ -52,9 +53,42 @@ export default function MePage() {
       const name = profile?.username ?? "";
       setCurrent(name);
       setDraft(name);
+      const avatar = profile?.avatar_url ?? null;
+      setCurrentAvatar(avatar);
+      setDraftAvatar(avatar);
       setLoading(false);
     })();
   }, [navigate]);
+
+  const handleAvatarChange = (file: File | null) => {
+    setErr(null);
+    setMsg(null);
+
+    if (!file) {
+      setDraftAvatar(null);
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setErr("画像ファイルを選んでね");
+      return;
+    }
+
+    if (file.size > 512 * 1024) {
+      setErr("画像サイズは512KB以下にしてね");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : null;
+      setDraftAvatar(result);
+    };
+    reader.onerror = () => {
+      setErr("画像の読み込みに失敗しました");
+    };
+    reader.readAsDataURL(file);
+  };
 
   async function save() {
     setErr(null);
@@ -77,6 +111,7 @@ export default function MePage() {
       const { error } = await supabase.from("profiles").upsert({
         user_id: user.id,
         username,
+        avatar_url: draftAvatar,
       });
 
       if (error) {
@@ -90,6 +125,7 @@ export default function MePage() {
       }
 
       setCurrent(username);
+      setCurrentAvatar(draftAvatar);
       setMsg("保存しました");
     } catch (e: any) {
       setErr(e?.message ?? "保存に失敗しました");
@@ -113,8 +149,7 @@ export default function MePage() {
     navigate("/onboarding");
   }
 
-  const changed = draft.trim() !== current.trim();
-
+  const changed = draft.trim() !== current.trim() || draftAvatar !== currentAvatar;
   return (
     <div style={{ padding: 16, maxWidth: 560, margin: "0 auto" }}>
       <div className="header">
@@ -124,14 +159,70 @@ export default function MePage() {
         </Link>
       </div>
       <div style={{ color: "#666", marginBottom: 16, fontSize: 13 }}>
-          みんなの記録・ランキングで表示される名前です
-          
-        </div>
+        みんなの記録・ランキングで表示される名前です
+
+      </div>
 
       {loading ? (
         <div>読み込み中...</div>
       ) : (
         <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>アイコン</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: "50%",
+                  border: "1px solid #e5e7eb",
+                  background: "#f3f4f6",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: "#6b7280",
+                }}
+              >
+                {draftAvatar ? (
+                  <img
+                    src={draftAvatar}
+                    alt="アイコン"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <span>{draft.trim().slice(0, 1) || "?"}</span>
+                )}
+              </div>
+              <label style={{ display: "block" }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)}
+                  style={{ display: "none" }}
+                />
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    background: "#fff",
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                >
+                  画像を選ぶ
+                </span>
+              </label>
+            </div>
+            <div style={{ fontSize: 12, color: "#999", marginTop: 6 }}>
+              512KB以下の画像を設定できます
+            </div>
+          </div>
+
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>ユーザーネーム</div>
             <input

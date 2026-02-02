@@ -6,6 +6,7 @@ import { useUser } from "../context/UserContext";
 type ProfileRow = {
   user_id: string;
   username: string;
+  avatar_url: string | null;
 };
 
 type FollowRow = {
@@ -14,8 +15,7 @@ type FollowRow = {
 };
 
 export default function FriendsPage() {
-  const { userId, username: myName, loading } = useUser();
-
+  const { userId, username: myName, avatarUrl: myAvatar, loading } = useUser();
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchErr, setSearchErr] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export default function FriendsPage() {
       // ilike は PostgreSQL の case-insensitive
       const { data, error } = await supabase
         .from("profiles")
-        .select("user_id, username")
+        .select("user_id, username, avatar_url")
         .ilike("username", `%${keyword}%`)
         .limit(20);
 
@@ -158,7 +158,31 @@ export default function FriendsPage() {
         <div>
           <h2 style={{ margin: 0 }}>フレンド</h2>
           <div className="small">
-            {myName ? `あなた：${myName}` : "ユーザー名を設定すると探しやすいよ"}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "1px solid #e5e7eb",
+                  background: "#f3f4f6",
+                  overflow: "hidden",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#6b7280",
+                }}
+              >
+                {myAvatar ? (
+                  <img src={myAvatar} alt="あなたのアイコン" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span>{myName?.slice(0, 1) || "?"}</span>
+                )}
+              </span>
+              {myName ? `あなた：${myName}` : "ユーザー名を設定すると探しやすいよ"}
+            </span>
           </div>
         </div>
 
@@ -226,6 +250,32 @@ export default function FriendsPage() {
                 >
                   <div>
                     <div style={{ fontWeight: 800, display: "flex", gap: 8, alignItems: "center" }}>
+                      <span
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          border: "1px solid #e5e7eb",
+                          background: "#f3f4f6",
+                          overflow: "hidden",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "#6b7280",
+                        }}
+                      >
+                        {p.avatar_url ? (
+                          <img
+                            src={p.avatar_url}
+                            alt={`${p.username}のアイコン`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          <span>{p.username.slice(0, 1) || "?"}</span>
+                        )}
+                      </span>
                       <span>{p.username}</span>
                       {isFriend && (
                         <span style={{

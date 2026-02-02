@@ -4,18 +4,21 @@ import { supabase } from "../lib/supabaseClient";
 type UserContextValue = {
   userId: string | null;
   username: string | null;
+  avatarUrl: string | null;
   loading: boolean;
 };
 
 const UserContext = createContext<UserContextValue>({
   userId: null,
   username: null,
+  avatarUrl: null,
   loading: true,
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,11 +38,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, avatar_url")
         .eq("user_id", user.id)
         .maybeSingle();
 
       setUsername(profile?.username ?? null);
+      setAvatarUrl(profile?.avatar_url ?? null);
       setLoading(false);
     })().catch((e) => {
       console.error(e);
@@ -48,7 +52,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <UserContext.Provider value={{ userId, username, loading }}>
+    <UserContext.Provider value={{ userId, username, avatarUrl, loading }}>
       {children}
     </UserContext.Provider>
   );

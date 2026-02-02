@@ -239,3 +239,16 @@ html, body {
   object-fit: contain;
   aspect-ratio: 16 / 9;
 }
+
+.header-user span {
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-user {
+  border:1px solid black;
+  border-radius: 10px;
+  
+}
