@@ -50,7 +50,7 @@ export default function RankingPage() {
       <div className="header">
         <div>
           <h2 style={{ margin: 0 }}>ランキング</h2>
-          <div className="small">達成地域数 / プレート数</div>
+          <div className="small">登録地域数 / プレート数</div>
         </div>
         <div className="header-actions">
           <Link to="/" className="btn">← ホーム</Link>
@@ -66,7 +66,7 @@ export default function RankingPage() {
             fontWeight: sortKey === "completed" ? 800 : 600,
           }}
         >
-          達成地域数
+          登録地域数
         </button>
         <button
           className="btn"
@@ -128,7 +128,7 @@ export default function RankingPage() {
               </div>
 
               <div style={{ display: "flex", gap: 10, fontSize: 13, opacity: 0.85 }}>
-                <span>達成 {r.completed_count}</span>
+                <span>登録地域 {r.completed_count}</span>
                 <span>プレート {r.plate_count}</span>
               </div>
             </Link>

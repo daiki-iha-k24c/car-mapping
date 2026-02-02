@@ -222,7 +222,7 @@ export default function HomePage() {
                   className="menu-item"
                   onClick={() => setMenuOpen(false)}
                 >
-                  ◎地域一覧
+                  🗾地域一覧
                 </Link>
 
                 <Link
@@ -230,7 +230,15 @@ export default function HomePage() {
                   className="menu-item"
                   onClick={() => setMenuOpen(false)}
                 >
-                  ◎ランキング
+                  👑ランキング
+                </Link>
+
+                <Link
+                  to="/group"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  🗾みんなで埋める日本地図
                 </Link>
 
                 <Link

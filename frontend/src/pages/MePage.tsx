@@ -137,7 +137,7 @@ export default function MePage() {
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="例：daiki"
+              placeholder=""
               style={{
                 width: "100%",
                 padding: 12,

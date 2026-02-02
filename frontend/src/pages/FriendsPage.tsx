@@ -240,11 +240,11 @@ export default function FriendsPage() {
                       )}
                     </div>
 
-                    <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                    {/* <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
                       <Link to={`/u/${encodeURIComponent(p.username)}`} className="btn" style={{ textDecoration: "none" }}>
                         地図を見る
                       </Link>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div style={{ display: "flex", gap: 8 }}>
