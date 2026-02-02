@@ -39,13 +39,6 @@ function fixSvgViewBox(svg: string) {
 //   return list.some((p) => p.classNumber === classNumber && p.kana === kana && p.serial === serial);
 // }
 
-// 分類番号（最低限：現実に多いもの + 汎用）
-// ※もっと厳密にしたければ後で地域/種別に合わせて絞れる
-const CLASS_NUMBERS = [
-  "100", "110", "200", "300", "330", "400", "500", "530", "580", "600", "800",
-];
-
-// ひらがな（ナンバーで使われやすい範囲の例。必要なら増やす）
 const KANAS = [
   "あ", "い", "う", "え", "お",
   "か", "き", "く", "け", "こ",
@@ -70,6 +63,10 @@ const COLORS: Array<{ label: string; value: PlateColor }> = [
 function digitsOnly4(raw: string) {
   // 数字だけ抽出して末尾4桁だけ残す（ペースト対策）
   return raw.replace(/\D/g, "").slice(-4);
+}
+
+function digitsOnly3(raw: string) {
+  return raw.replace(/\D/g, "").slice(0, 3);
 }
 
 // プレビュー用：右詰めで「・」埋め（例: "3"→"・・・3"）
@@ -373,11 +370,26 @@ export default function PlateRegisterModal({
           </Field>
 
           <Field label="分類番号">
-            <Select
+            <input
               value={v.classNumber}
-              onChange={(x) => setV((p) => ({ ...p, classNumber: x }))}
-              placeholder="選択"
-              options={CLASS_NUMBERS.map((x) => ({ value: x, label: x }))}
+              onChange={(e) => {
+                const next = digitsOnly3(e.target.value);
+                setV((p) => ({ ...p, classNumber: next }));
+              }}
+              type="tel"
+              inputMode="numeric"
+              placeholder="(例) 300"
+              style={{
+                width: "100%",
+                height: 44,
+                borderRadius: 12,
+                border: "2px solid #e5e7eb",
+                padding: "0 12px",
+                fontSize: 16,
+                outline: "none",
+                background: "#fff",
+                boxSizing: "border-box",
+              }}
             />
           </Field>
 
