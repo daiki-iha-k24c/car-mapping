@@ -7,17 +7,20 @@ export type Plate = {
   classNumber: string;
   kana: string;
   serial: string;
-  color: "white" | "yellow" | "green" | "pink";
+  color: PlateColor;
   renderSvg: string;
   createdAt: string;
 };
 
+const KEY_BASE = "plates_v1";
 
-const KEY = "plates_v1";
+function key(userId: string) {
+  return `${KEY_BASE}:${userId}`;
+}
 
-function loadAll(): Plate[] {
+function loadAll(userId: string): Plate[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -26,18 +29,22 @@ function loadAll(): Plate[] {
   }
 }
 
-function saveAll(plates: Plate[]) {
-  localStorage.setItem(KEY, JSON.stringify(plates));
+function saveAll(userId: string, plates: Plate[]) {
+  localStorage.setItem(key(userId), JSON.stringify(plates));
 }
 
-export function listPlatesByRegionId(regionId: string): Plate[] {
-  return loadAll()
+export function listPlatesByRegionId(userId: string, regionId: string): Plate[] {
+  return loadAll(userId)
     .filter((p) => p.regionId === regionId)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
-export function addPlate(plate: Plate) {
-  const all = loadAll();
+export function addPlate(userId: string, plate: Plate) {
+  const all = loadAll(userId);
   all.push(plate);
-  saveAll(all);
+  saveAll(userId, all);
+}
+
+export function clearPlates(userId: string) {
+  localStorage.removeItem(key(userId));
 }

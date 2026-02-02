@@ -6,6 +6,7 @@ import { renderPlateSvg } from "../svg/renderPlateSvg";
 
 export type PlateRegisterModalProps = {
   open: boolean;
+  userId: string | null;
   regions: Array<Region & { reading?: string }>;
   onClose: () => void;
   onRegistered: (regionName: string) => void;
@@ -27,8 +28,14 @@ function fixSvgViewBox(svg: string) {
   return svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
 }
 
-function isDuplicate(regionId: string, classNumber: string, kana: string, serial: string) {
-  const list = listPlatesByRegionId(regionId);
+function isDuplicate(
+  userId: string,
+  regionId: string,
+  classNumber: string,
+  kana: string,
+  serial: string
+) {
+  const list = listPlatesByRegionId(userId, regionId);
   return list.some((p) => p.classNumber === classNumber && p.kana === kana && p.serial === serial);
 }
 
@@ -148,6 +155,7 @@ function fitSvgToBox(svg: string) {
 
 export default function PlateRegisterModal({
   open,
+  userId,
   regions,
   onClose,
   onRegistered,
@@ -226,15 +234,22 @@ export default function PlateRegisterModal({
   };
 
   const submit = () => {
-  if (!canSubmit || done) return;
+    if (!canSubmit || done) return;
 
-  const serialValue = serialForSave(v.serialRaw);
-  if (!serialValue) return; // ここならOK（早期returnしてもUIは消えない）
+    // ✅ userId 未確定ならここで止める（以降で使うので早めに）
+    if (!userId) {
+      setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
+      return;
+    }
 
-  if (isDuplicate(v.regionId, v.classNumber, v.kana, serialValue)) {
-    setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
-    return;
-  }
+    const serialValue = serialForSave(v.serialRaw);
+    if (!serialValue) return;
+
+    // ✅ 重複チェックも userId を使う
+    if (isDuplicate(userId, v.regionId, v.classNumber, v.kana, serialValue)) {
+      setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
+      return;
+    }
 
     const color = v.color as PlateColor;
 
@@ -259,7 +274,9 @@ export default function PlateRegisterModal({
       createdAt: new Date().toISOString(),
     };
 
-    addPlate(plate);
+    // ✅ userId付きで保存
+    addPlate(userId, plate);
+
     onRegistered(v.regionName);
     setDone(true);
     setDupMsg("");
@@ -390,7 +407,7 @@ export default function PlateRegisterModal({
             }}
             type="tel"
             inputMode="numeric"
-            placeholder="例）1234"
+            placeholder="(例) 1234"
             style={{
               width: "100%",
               height: 44,

@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import JapanMap from "../components/JapanMap";
 import CompleteModal from "../components/CompleteModal";
 import PrefModal from "../components/PrefModal";
-import type { Region, RegionRecord } from "../lib/region";
-import { loadRecords, saveRecords } from "../lib/storage";
-import { regions, buildPrefProgress } from "../lib/regionIndex";
-import { PLATE_REGIONS } from "../data/plateRegions";
 import HelpModal from "../components/HelpModal";
 import PlateRegisterModal from "../components/PlateRegisterModal";
 
+import type { Region, RegionRecord } from "../lib/region";
+import { regions, buildPrefProgress } from "../lib/regionIndex";
+import { PLATE_REGIONS } from "../data/plateRegions";
+
+import { supabase } from "../lib/supabaseClient";
+import { loadRecords, saveRecords, clearRecords } from "../lib/storage";
+import { clearPlates } from "../storage/plates";
 
 function normRegionName(s: string) {
   return (s || "").trim().replace(/\s+/g, "");
 }
 
-// 「地域」プルダウンの値（例: 横浜）から Region を特定するために使う
 function findRegionByName(name: string): Region | null {
   const key = normRegionName(name);
   if (!key) return null;
@@ -30,32 +32,72 @@ function findRegionByName(name: string): Region | null {
 }
 
 export default function HomePage() {
-  const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>(() => loadRecords());
+  const navigate = useNavigate();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [picked, setPicked] = useState<Region | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
+  const [menuOpen, setMenuOpen] = useState(false);
   const [prefOpen, setPrefOpen] = useState(false);
   const [pickedPref, setPickedPref] = useState<string | null>(null);
-
   const [helpOpen, setHelpOpen] = useState(false);
 
-  // ✅ 新仕様：ホームから開く「ナンバープレート登録」モーダル
+  // ✅ ホームから開く登録モーダル
   const [plateOpen, setPlateOpen] = useState(false);
 
+  // ✅ localStorage分離に使う userId（Supabase user.id）
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  // ✅ 地図達成の記録
+  const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
+
+  // 1) セッション確認 + username確認 → OKなら userId 確定
   useEffect(() => {
-    saveRecords(recordMap);
-  }, [recordMap]);
+    (async () => {
+      let { data: sess } = await supabase.auth.getSession();
+      let user = sess.session?.user;
 
-  const completedRegionIds = useMemo(() => {
-    const set = new Set<string>();
-    for (const [id, rec] of Object.entries(recordMap)) {
-      if (rec.completed) set.add(id);
-    }
-    return set;
-  }, [recordMap]);
+      if (!user) {
+        const res = await supabase.auth.signInAnonymously();
+        if (res.error) throw res.error;
+        user = res.data.user!;
+      }
 
-  const prefProgress = useMemo(() => buildPrefProgress(regions, recordMap), [recordMap]);
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!profile?.username) {
+        navigate("/onboarding");
+        return;
+      }
+
+      setAuthUserId(user.id);
+    })().catch(console.error);
+  }, [navigate]);
+
+  // 2) userIdが確定したら localStorage をロード
+  useEffect(() => {
+    if (!authUserId) return;
+    setRecordMap(loadRecords(authUserId));
+  }, [authUserId]);
+
+  // 3) recordMap が変わったら保存（※レンダー中に保存しない）
+  useEffect(() => {
+    if (!authUserId) return;
+    saveRecords(authUserId, recordMap);
+  }, [authUserId, recordMap]);
+
+  const userId = authUserId; // 以降のガードに使う
+
+  const prefProgress = useMemo(
+    () => buildPrefProgress(regions, recordMap),
+    [recordMap]
+  );
 
   const openPref = (prefName: string) => {
     setPickedPref(prefName);
@@ -77,6 +119,8 @@ export default function HomePage() {
     setPicked(null);
   };
 
+  const alreadyDone = picked ? !!recordMap[picked.id]?.completed : false;
+
   const confirmComplete = (memo: string) => {
     if (!picked) return;
     const now = new Date().toISOString();
@@ -93,8 +137,6 @@ export default function HomePage() {
 
     closeModal();
   };
-
-  const alreadyDone = picked ? !!recordMap[picked.id]?.completed : false;
 
   const readingMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -123,8 +165,7 @@ export default function HomePage() {
     }));
   }, [readingMap]);
 
-  // ✅ 新仕様：ナンバープレート登録が完了したら、その地域を「達成」にする
-  // PlateRegisterModal から "regionName"（例: 横浜）が返ってくる想定
+  // ✅ PlateRegisterModal 完了 → 地域を達成にする
   const markCompletedByRegionName = (regionName: string) => {
     const region = findRegionByName(regionName);
     if (!region) return;
@@ -142,13 +183,10 @@ export default function HomePage() {
   };
 
   const handleClearAll = () => {
-    // ① 地図（地域達成）
+    if (!userId) return; // ✅ nullガード
     setRecordMap({});
-
-    // ② ナンバープレート側（キー名はあなたの実装に合わせる）
-    localStorage.removeItem("plate_records_v1");
-    localStorage.removeItem("plates_v1");
-
+    clearRecords(userId);
+    clearPlates(userId);
     setHelpOpen(false);
   };
 
@@ -161,13 +199,6 @@ export default function HomePage() {
         </div>
 
         <div className="header-actions">
-          {/* PC用
-          <div className="actions-desktop">
-            <button className="btn" onClick={() => setHelpOpen(true)}>ⓘ遊び方</button>
-            <Link to="/regions" className="btn">地域一覧</Link>
-          </div> */}
-
-          {/* モバイル用：ハンバーガー */}
           <div className="actions-mobile">
             <button
               className="btn"
@@ -186,6 +217,7 @@ export default function HomePage() {
                 >
                   ◎地域一覧
                 </Link>
+
                 <button
                   className="menu-item"
                   onClick={() => {
@@ -196,37 +228,44 @@ export default function HomePage() {
                   ⓘ 遊び方
                 </button>
 
-                
+                <Link
+                  to="/me"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  👤 ユーザーページ
+                </Link>
               </div>
             )}
           </div>
         </div>
-
       </div>
 
       <div className="stack">
-        {/* ✅ 新仕様：ホームに「ナンバープレートを登録」ボタン（カメラ削除） */}
         <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-          <button className="btn"
+          <button
+            className="btn"
             style={{
               width: "100%",
               height: 52,
               borderRadius: 14,
               border: "none",
-              fontSize: 18,
+              fontSize: 21,
               fontWeight: "bold",
               textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
               color: "#fff",
               boxShadow: "0 6px 16px #a2d7dd",
-              backgroundImage: "radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
+              backgroundImage:
+                "radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
               opacity: 0.7,
             }}
-            onClick={() => setPlateOpen(true)}>
+            onClick={() => setPlateOpen(true)}
+            disabled={!userId} // ✅ userId確定前は押せない
+            title={!userId ? "ログイン確認中..." : ""}
+          >
             ナンバープレートを登録
           </button>
         </div>
-
-
 
         <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
 
@@ -235,7 +274,10 @@ export default function HomePage() {
           prefName={pickedPref}
           regionsInPref={regionsInPref}
           recordMap={recordMap}
+          userId={userId}
           onClose={closePref}
+          // PrefModal内で地域クリック→達成モーダルを開く設計ならこれを渡す
+          // onPickRegion={openComplete}
         />
       </div>
 
@@ -248,18 +290,21 @@ export default function HomePage() {
         onConfirm={confirmComplete}
       />
 
-      {/* ✅ 新仕様 PlateRegisterModal：region を Home から渡さない */}
       <PlateRegisterModal
         open={plateOpen}
-        regions={regionsWithReading} // 地域プルダウン候補（読みも使うなら）
+        userId={userId}   
+        regions={regionsWithReading}
         onClose={() => setPlateOpen(false)}
         onRegistered={(regionName: string) => {
-          // 登録完了 → 地図側も達成扱いにする
           markCompletedByRegionName(regionName);
         }}
       />
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} onClearAll={handleClearAll} />
+      <HelpModal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        onClearAll={handleClearAll}
+      />
     </div>
   );
 }

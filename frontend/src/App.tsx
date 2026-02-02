@@ -3,6 +3,8 @@ import HomePage from "./pages/HomePage";
 import RegionListPage from "./pages/RegionListPage";
 import RegionPage from "./pages/RegionPage";
 import RegionPlatesPage from "./pages/RegionPlatesPage";
+import OnboardingPage from "./pages/Onboarding";
+import MePage from "./pages/MePage";
 
 export default function App() {
   return (
@@ -20,6 +22,9 @@ export default function App() {
 
       {/* フォールバック */}
       <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/Onboarding" element={<OnboardingPage />} />
+      <Route path="/me" element={<MePage />} />
+
     </Routes>
   );
 }

@@ -4,11 +4,15 @@
 
 import type { RegionRecord } from "./region";
 
-const KEY = "plate-region-records-v1";
+const KEY_BASE = "plate-region-records-v1";
 
-export function loadRecords(): Record<string, RegionRecord> {
+function key(userId: string) {
+  return `${KEY_BASE}:${userId}`;
+}
+
+export function loadRecords(userId: string): Record<string, RegionRecord> {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key(userId));
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object") return parsed;
@@ -18,6 +22,10 @@ export function loadRecords(): Record<string, RegionRecord> {
   }
 }
 
-export function saveRecords(records: Record<string, RegionRecord>) {
-  localStorage.setItem(KEY, JSON.stringify(records));
+export function saveRecords(userId: string, records: Record<string, RegionRecord>) {
+  localStorage.setItem(key(userId), JSON.stringify(records));
+}
+
+export function clearRecords(userId: string) {
+  localStorage.removeItem(key(userId));
 }
