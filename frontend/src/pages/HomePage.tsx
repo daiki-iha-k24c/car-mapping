@@ -14,6 +14,9 @@ import { supabase } from "../lib/supabaseClient";
 import { loadRecords, saveRecords, clearRecords } from "../lib/storage";
 import { clearPlates } from "../storage/plates";
 
+import { useUser } from "../context/UserContext";
+import { loadRecordsCloud, saveRecordsCloud, clearRecordsCloud } from "../storage/regionRecordsCloud";
+
 function normRegionName(s: string) {
   return (s || "").trim().replace(/\s+/g, "");
 }
@@ -42,6 +45,10 @@ export default function HomePage() {
   const [pickedPref, setPickedPref] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
 
+  const { userId, loading } = useUser();
+  const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
+
+
   // ✅ ホームから開く登録モーダル
   const [plateOpen, setPlateOpen] = useState(false);
 
@@ -49,7 +56,6 @@ export default function HomePage() {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
 
   // ✅ 地図達成の記録
-  const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
 
   // 1) セッション確認 + username確認 → OKなら userId 確定
   useEffect(() => {
@@ -82,17 +88,19 @@ export default function HomePage() {
 
   // 2) userIdが確定したら localStorage をロード
   useEffect(() => {
-    if (!authUserId) return;
-    setRecordMap(loadRecords(authUserId));
-  }, [authUserId]);
+    if (!userId) return;
+    (async () => {
+      const m = await loadRecordsCloud(userId);
+      setRecordMap(m);
+    })().catch(console.error);
+  }, [userId]);
 
   // 3) recordMap が変わったら保存（※レンダー中に保存しない）
   useEffect(() => {
-    if (!authUserId) return;
-    saveRecords(authUserId, recordMap);
-  }, [authUserId, recordMap]);
+  if (!userId) return;
+  saveRecordsCloud(userId, recordMap).catch(console.error);
+}, [userId, recordMap]);
 
-  const userId = authUserId; // 以降のガードに使う
 
   const prefProgress = useMemo(
     () => buildPrefProgress(regions, recordMap),
@@ -183,12 +191,11 @@ export default function HomePage() {
   };
 
   const handleClearAll = () => {
-    if (!userId) return; // ✅ nullガード
-    setRecordMap({});
-    clearRecords(userId);
-    clearPlates(userId);
-    setHelpOpen(false);
-  };
+  if (!userId) return;
+  setRecordMap({});
+  clearRecordsCloud(userId).catch(console.error);
+  // plates は次のフェーズ（今はローカルのままでOK）
+};
 
   return (
     <div className="container">
@@ -216,6 +223,14 @@ export default function HomePage() {
                   onClick={() => setMenuOpen(false)}
                 >
                   ◎地域一覧
+                </Link>
+
+                <Link
+                  to="/ranking"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  ◎ランキング
                 </Link>
 
                 <button
@@ -276,8 +291,8 @@ export default function HomePage() {
           recordMap={recordMap}
           userId={userId}
           onClose={closePref}
-          // PrefModal内で地域クリック→達成モーダルを開く設計ならこれを渡す
-          // onPickRegion={openComplete}
+        // PrefModal内で地域クリック→達成モーダルを開く設計ならこれを渡す
+        // onPickRegion={openComplete}
         />
       </div>
 
@@ -292,7 +307,7 @@ export default function HomePage() {
 
       <PlateRegisterModal
         open={plateOpen}
-        userId={userId}   
+        userId={userId}
         regions={regionsWithReading}
         onClose={() => setPlateOpen(false)}
         onRegistered={(regionName: string) => {

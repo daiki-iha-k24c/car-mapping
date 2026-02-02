@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
 
 type Profile = { username: string };
 
@@ -116,10 +117,16 @@ export default function MePage() {
 
   return (
     <div style={{ padding: 16, maxWidth: 560, margin: "0 auto" }}>
-      <h2 style={{ margin: "8px 0 4px" }}>ユーザー</h2>
-      <div style={{ color: "#666", marginBottom: 16, fontSize: 13 }}>
-        みんなの記録・ランキングで表示される名前です
+      <div className="header">
+        <h2 style={{ margin: "8px 0 4px" }}>ユーザー</h2>
+        <Link to="/" className="btn">
+          ホームに戻る
+        </Link>
       </div>
+      <div style={{ color: "#666", marginBottom: 16, fontSize: 13 }}>
+          みんなの記録・ランキングで表示される名前です
+          
+        </div>
 
       {loading ? (
         <div>読み込み中...</div>

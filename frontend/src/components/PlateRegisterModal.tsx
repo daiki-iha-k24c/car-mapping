@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Region } from "../lib/region";
 import type { Plate, PlateColor } from "../storage/plates";
-import { addPlate, listPlatesByRegionId } from "../storage/plates";
+import { addPlateCloud } from "../storage/platesCloud";
 import { renderPlateSvg } from "../svg/renderPlateSvg";
 
 export type PlateRegisterModalProps = {
@@ -28,16 +28,16 @@ function fixSvgViewBox(svg: string) {
   return svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
 }
 
-function isDuplicate(
-  userId: string,
-  regionId: string,
-  classNumber: string,
-  kana: string,
-  serial: string
-) {
-  const list = listPlatesByRegionId(userId, regionId);
-  return list.some((p) => p.classNumber === classNumber && p.kana === kana && p.serial === serial);
-}
+// function isDuplicate(
+//   userId: string,
+//   regionId: string,
+//   classNumber: string,
+//   kana: string,
+//   serial: string
+// ) {
+//   const list = listPlatesByRegionId(userId, regionId);
+//   return list.some((p) => p.classNumber === classNumber && p.kana === kana && p.serial === serial);
+// }
 
 // 分類番号（最低限：現実に多いもの + 汎用）
 // ※もっと厳密にしたければ後で地域/種別に合わせて絞れる
@@ -233,54 +233,59 @@ export default function PlateRegisterModal({
     setDupMsg("");
   };
 
-  const submit = () => {
-    if (!canSubmit || done) return;
+  const submit = async () => {
+  if (!canSubmit || done) return;
 
-    // ✅ userId 未確定ならここで止める（以降で使うので早めに）
-    if (!userId) {
-      setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
-      return;
-    }
+  if (!userId) {
+    setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
+    return;
+  }
 
-    const serialValue = serialForSave(v.serialRaw);
-    if (!serialValue) return;
+  const serialValue = serialForSave(v.serialRaw);
+  if (!serialValue) return;
 
-    // ✅ 重複チェックも userId を使う
-    if (isDuplicate(userId, v.regionId, v.classNumber, v.kana, serialValue)) {
-      setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
-      return;
-    }
+  const color = v.color as PlateColor;
 
-    const color = v.color as PlateColor;
-
-    const svg = fixSvgViewBox(
-      renderPlateSvg({
-        regionName: v.regionName,
-        classNumber: v.classNumber,
-        kana: v.kana,
-        serial: serialValue,
-        color,
-      })
-    );
-
-    const plate: Plate = {
-      id: crypto.randomUUID(),
-      regionId: v.regionId,
+  const svg = fixSvgViewBox(
+    renderPlateSvg({
+      regionName: v.regionName,
       classNumber: v.classNumber,
       kana: v.kana,
       serial: serialValue,
       color,
-      renderSvg: svg,
-      createdAt: new Date().toISOString(),
-    };
+    })
+  );
 
-    // ✅ userId付きで保存
-    addPlate(userId, plate);
+  const plate: Plate = {
+    id: crypto.randomUUID(),
+    regionId: v.regionId,
+    classNumber: v.classNumber,
+    kana: v.kana,
+    serial: serialValue,
+    color,
+    renderSvg: svg,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    await addPlateCloud(userId, plate);
 
     onRegistered(v.regionName);
     setDone(true);
     setDupMsg("");
-  };
+  } catch (e: any) {
+    const msg = String(e?.message ?? "");
+
+    // ✅ unique index 違反を「すでに登録済み」に変換
+    if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+      setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
+      return;
+    }
+
+    setDupMsg(msg || "保存に失敗しました");
+  }
+};
+
 
   return (
     <div
