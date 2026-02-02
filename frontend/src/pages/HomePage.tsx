@@ -97,9 +97,9 @@ export default function HomePage() {
 
   // 3) recordMap が変わったら保存（※レンダー中に保存しない）
   useEffect(() => {
-  if (!userId) return;
-  saveRecordsCloud(userId, recordMap).catch(console.error);
-}, [userId, recordMap]);
+    if (!userId) return;
+    saveRecordsCloud(userId, recordMap).catch(console.error);
+  }, [userId, recordMap]);
 
 
   const prefProgress = useMemo(
@@ -191,11 +191,11 @@ export default function HomePage() {
   };
 
   const handleClearAll = () => {
-  if (!userId) return;
-  setRecordMap({});
-  clearRecordsCloud(userId).catch(console.error);
-  // plates は次のフェーズ（今はローカルのままでOK）
-};
+    if (!userId) return;
+    setRecordMap({});
+    clearRecordsCloud(userId).catch(console.error);
+    // plates は次のフェーズ（今はローカルのままでOK）
+  };
 
   return (
     <div className="container">
@@ -233,6 +233,22 @@ export default function HomePage() {
                   ◎ランキング
                 </Link>
 
+                <Link
+                  to="/friends"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}>
+                  👥 フレンド
+                </Link>
+
+
+                <Link
+                  to="/me"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  👤 ユーザーページ
+                </Link>
+
                 <button
                   className="menu-item"
                   onClick={() => {
@@ -243,13 +259,7 @@ export default function HomePage() {
                   ⓘ 遊び方
                 </button>
 
-                <Link
-                  to="/me"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  👤 ユーザーページ
-                </Link>
+
               </div>
             )}
           </div>

@@ -8,6 +8,8 @@ import MePage from "./pages/MePage";
 import { UserProvider } from "./context/UserContext";
 import UserMapPage from "./pages/UserMapPage";
 import RankingPage from "./pages/RankingPage";
+import FriendsPage from "./pages/FriendsPage";
+
 
 export default function App() {
   return (
@@ -31,7 +33,7 @@ export default function App() {
 
         <Route path="/u/:username" element={<UserMapPage />} />
         <Route path="/ranking" element={<RankingPage />} />
-
+        <Route path="/friends" element={<FriendsPage />} />
   
       </Routes>
     </UserProvider>
