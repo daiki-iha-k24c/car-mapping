@@ -3,8 +3,8 @@ import JapanMap from "../components/JapanMap";
 import { supabase } from "../lib/supabaseClient";
 import type { PrefStatus } from "../lib/region";
 import { PLATE_REGIONS } from "../data/plateRegions";
-import { Link} from "react-router-dom";
-
+import { Link } from "react-router-dom";
+import { listGroupPlatesByRegion } from "../storage/groupPlates";
 
 type GroupRow = {
     region_id: string;
@@ -21,6 +21,13 @@ type MemberState = {
     error: string | null;
     rows: MemberRow[];
 };
+
+type RegionPlatesState = {
+    loading: boolean;
+    error: string | null;
+    rows: any[];
+};
+
 
 function regionIdFromPlate(prefecture: string, name: string) {
     // DB の region_id が "静岡県:浜松" 形式の想定
@@ -43,6 +50,9 @@ export default function GroupMapPage() {
     // --- accordion (region -> members) ---
     const [openRegionId, setOpenRegionId] = useState<string | null>(null);
     const [memberMap, setMemberMap] = useState<Record<string, MemberState>>({});
+
+    const [platesMap, setPlatesMap] = useState<Record<string, RegionPlatesState>>({});
+
 
     // ① みんなの地図（都道府県塗り用）データ取得
     useEffect(() => {
@@ -153,36 +163,37 @@ export default function GroupMapPage() {
     );
 
     // ⑤ 地域の達成者一覧（遅延ロード＆キャッシュ）
-    const ensureMembers = useCallback(
-        async (regionId: string) => {
-            // すでに取得済みならスキップ
-            const existing = memberMap[regionId];
-            if (existing && !existing.loading && existing.rows.length > 0) return;
+    async function ensurePlates(regionId: string) {
+        setPlatesMap((m) => ({
+            ...m,
+            [regionId]: { loading: true, error: null, rows: m[regionId]?.rows ?? [] },
+        }));
 
-            setMemberMap((m) => ({
+        try {
+            const rows = await listGroupPlatesByRegion(regionId);
+            setPlatesMap((m) => ({
                 ...m,
-                [regionId]: {
-                    loading: true,
-                    error: null,
-                    rows: m[regionId]?.rows ?? [],
-                },
+                [regionId]: { loading: false, error: null, rows },
             }));
-
-            const { data, error } = await supabase.rpc("get_group_region_members", {
-                region_id_in: regionId,
-            });
-
-            setMemberMap((m) => ({
+        } catch (e: any) {
+            setPlatesMap((m) => ({
                 ...m,
-                [regionId]: {
-                    loading: false,
-                    error: error ? error.message : null,
-                    rows: (data ?? []) as MemberRow[],
-                },
+                [regionId]: { loading: false, error: String(e?.message ?? e), rows: [] },
             }));
-        },
-        [memberMap]
-    );
+        }
+    }
+
+    function hashToHue(s: string) {
+        let h = 0;
+        for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+        return h % 360;
+    }
+
+    function toSvgDataUrl(svg: string) {
+        const safe = svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
+        return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(safe)))}`;
+    }
+
 
     // ⑥ 都道府県モーダルで使う：region_id -> completed_count
     const prefDoneByRegionId = useMemo(() => {
@@ -304,7 +315,7 @@ export default function GroupMapPage() {
 
                                     const clickable = done > 0; // ✅ 達成者がいないものは押下不可
                                     const isOpen = openRegionId === regionId;
-                                    const members = memberMap[regionId];
+                                    const platesState = platesMap[regionId];
 
                                     return (
                                         <div key={regionId} style={{ display: "grid", gap: 6 }}>
@@ -323,7 +334,8 @@ export default function GroupMapPage() {
                                                     setOpenRegionId(nextOpen);
 
                                                     if (!isOpen) {
-                                                        await ensureMembers(regionId);
+                                                        await ensurePlates(regionId);
+
                                                     }
                                                 }}
                                             >
@@ -356,48 +368,98 @@ export default function GroupMapPage() {
                                                         borderLeft: "4px solid #e5e7eb",
                                                     }}
                                                 >
-                                                    {members?.error && (
+                                                    {platesState?.error && (
                                                         <div style={{ color: "#b00020", fontWeight: 700 }}>
-                                                            {members.error}
+                                                            {platesState.error}
                                                         </div>
                                                     )}
 
-                                                    {members?.loading ? (
+                                                    {platesState?.loading ? (
                                                         <div className="small">読み込み中…</div>
-                                                    ) : (members?.rows?.length ?? 0) === 0 ? (
-                                                        <div className="small">達成者が見つかりませんでした</div>
+                                                    ) : (platesState?.rows?.length ?? 0) === 0 ? (
+                                                        <div className="small">この地域のナンバープレートはまだありません</div>
                                                     ) : (
-                                                        <div style={{ display: "grid", gap: 8 }}>
-                                                            {members!.rows.map((m) => (
-                                                                <div
-                                                                    key={m.user_id}
-                                                                    className="card"
-                                                                    style={{
-                                                                        padding: 10,
-                                                                        borderRadius: 10,
-                                                                        cursor: "pointer",
-                                                                    }}
-                                                                    onClick={() => {
-                                                                        // ✅ ここで「フレンド地図」に遷移したいなら差し替え
-                                                                        // 例: useNavigate() で /user/:userId へ
-                                                                        console.log("go friend map", m.user_id);
-                                                                    }}
-                                                                >
-                                                                    <div style={{ fontWeight: 700 }}>{m.username}</div>
-                                                                    <div className="small" style={{ opacity: 0.7 }}>
-                                                                        {m.user_id}
+                                                        <div style={{ display: "grid", gap: 10 }}>
+                                                            {platesState!.rows.map((p: any) => {
+                                                                const hue = hashToHue(p.user_id);
+                                                                const bg = `hsl(${hue} 70% 96%)`;
+                                                                const ring = `hsl(${hue} 70% 55%)`;
+                                                                return (
+                                                                    <div
+                                                                        key={p.id}
+                                                                        className="card"
+                                                                        style={{
+                                                                            padding: 10,
+                                                                            borderRadius: 12,
+                                                                            background: bg,
+                                                                            display: "flex",
+                                                                            alignItems: "center",
+                                                                            gap: 12,
+                                                                        }}
+                                                                    >
+                                                                        {/* アイコン */}
+                                                                        <div
+                                                                            style={{
+                                                                                width: 44,
+                                                                                height: 44,
+                                                                                borderRadius: 999,
+                                                                                overflow: "hidden",
+                                                                                border: `2px solid ${ring}`,
+                                                                                background: "#fff",
+                                                                                flex: "0 0 auto",
+                                                                                display: "flex",
+                                                                                alignItems: "center",
+                                                                                justifyContent: "center",
+                                                                                fontWeight: 700,
+                                                                            }}
+                                                                            title={p.profile?.username ?? p.user_id}
+                                                                        >
+                                                                            {p.profile?.avatar_url ? (
+                                                                                <img
+                                                                                    src={p.profile.avatar_url}
+                                                                                    alt=""
+                                                                                    width={44}
+                                                                                    height={44}
+                                                                                    style={{ objectFit: "cover" }}
+                                                                                    onError={(e) => {
+                                                                                        // URL切れでも落ちない
+                                                                                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                                                                                    }}
+                                                                                />
+                                                                            ) : (
+                                                                                "👤"
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* プレート */}
+                                                                        <div style={{ flex: 1 }}>
+                                                                            <div className="small" style={{ opacity: 0.75, marginBottom: 6 }}>
+                                                                                {p.profile?.username ?? "unknown"}
+                                                                            </div>
+
+                                                                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                                                                <img
+                                                                                    className="plate-img"
+                                                                                    src={toSvgDataUrl(p.render_svg)}
+                                                                                    alt=""
+                                                                                    loading="lazy"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
-                                                    )}
+                                                    )
+                                                    }
                                                 </div>
                                             )}
                                         </div>
                                     );
                                 })}
                             </div>
-                        )}
+                        )
+                        }
                     </div>
                 </div>
             )}
