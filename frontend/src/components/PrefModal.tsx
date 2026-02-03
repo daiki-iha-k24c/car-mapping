@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { listPlatesByRegionId } from "../storage/plates";
+import { listPlatesCloudByRegionId, type PlateRow } from "../storage/platesCloud";
 
 type Props = {
   open: boolean;
   prefName: string | null;
   regionsInPref: any[];
   recordMap: any;
-  userId: string | null; // ✅ 追加
+  userId: string | null;
   onClose: () => void;
 };
 
@@ -19,12 +19,35 @@ export default function PrefModal({
   onClose,
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [platesMap, setPlatesMap] = useState<Record<string, PlateRow[]>>({});
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const fixSvgViewBox = (svg: string) =>
     svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
 
   const toSvgDataUrlBase64 = (svg: string) =>
     `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+
+  async function toggle(regionId: string) {
+    const next = expandedId === regionId ? null : regionId;
+    setExpandedId(next);
+
+    if (!next || !userId) return;
+
+    // 既に読み込み済みなら再取得しない
+    if (platesMap[next]) return;
+
+    setLoadingId(next);
+    try {
+      const plates = await listPlatesCloudByRegionId(userId, next);
+      setPlatesMap((m) => ({ ...m, [next]: plates }));
+    } catch (e) {
+      console.error("failed to load plates:", e);
+      setPlatesMap((m) => ({ ...m, [next]: [] }));
+    } finally {
+      setLoadingId(null);
+    }
+  }
 
   if (!open || !prefName) return null;
 
@@ -74,25 +97,23 @@ export default function PrefModal({
         ) : (
           <div style={{ marginTop: 12 }}>
             {regionsInPref.length === 0 ? (
-              <div style={{ opacity: 0.7 }}>この都道府県の地域データがありません。</div>
+              <div style={{ opacity: 0.7 }}>
+                この都道府県の地域データがありません。
+              </div>
             ) : (
               regionsInPref.map((r) => {
-                const regionId = r.id ?? r.regionId ?? r.code;
-                const regionName = r.name ?? r.regionName ?? r.label ?? "地域";
+                const regionId = String(r.id ?? r.regionId ?? r.code ?? "");
+                const regionName = String(r.name ?? r.regionName ?? r.label ?? "地域");
 
                 const completed = Boolean(recordMap?.[regionId]?.completed);
                 const isOpen = expandedId === regionId;
 
-                // ✅ 展開時だけプレートを読む
-                const plates = isOpen ? listPlatesByRegionId(userId, regionId) : [];
+                const plates = platesMap[regionId] ?? [];
 
                 return (
                   <div
-                    key={regionId}
-                    style={{
-                      padding: "12px 0",
-                      borderBottom: "1px solid #eee",
-                    }}
+                    key={regionId || regionName}
+                    style={{ padding: "12px 0", borderBottom: "1px solid #eee" }}
                   >
                     {/* 行ヘッダー */}
                     <div
@@ -103,7 +124,7 @@ export default function PrefModal({
                         gap: 12,
                         cursor: "pointer",
                       }}
-                      onClick={() => setExpandedId(isOpen ? null : regionId)}
+                      onClick={() => regionId && toggle(regionId)}
                     >
                       <div style={{ fontWeight: 700 }}>{regionName}</div>
 
@@ -127,11 +148,15 @@ export default function PrefModal({
                     {/* 展開中 */}
                     {isOpen && (
                       <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                        {plates.length === 0 ? (
-                          <div style={{ opacity: 0.6, fontSize: 13 }}>まだ登録がありません</div>
+                        {loadingId === regionId ? (
+                          <div style={{ opacity: 0.6, fontSize: 13 }}>読み込み中...</div>
+                        ) : plates.length === 0 ? (
+                          <div style={{ opacity: 0.6, fontSize: 13 }}>
+                            まだ登録がありません
+                          </div>
                         ) : (
-                          plates.map((p: any) => {
-                            const safeSvg = fixSvgViewBox(p.renderSvg);
+                          plates.map((p) => {
+                            const safeSvg = fixSvgViewBox(p.render_svg);
                             const src = toSvgDataUrlBase64(safeSvg);
 
                             return (

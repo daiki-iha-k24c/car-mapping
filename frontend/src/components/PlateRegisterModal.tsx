@@ -69,6 +69,10 @@ function digitsOnly3(raw: string) {
   return raw.replace(/\D/g, "").slice(0, 3);
 }
 
+function isHiragana(value: string) {
+  return /^[\u3041-\u3096\u309D-\u309F]+$/.test(value);
+}
+
 // プレビュー用：右詰めで「・」埋め（例: "3"→"・・・3"）
 function serialPreviewRightDots(raw: string) {
   const d = digitsOnly4(raw);
@@ -170,18 +174,31 @@ export default function PlateRegisterModal({
       .map((r) => ({ label: r.name, value: r.id }));
   }, [regions]);
 
+  const regionMatch = useMemo(() => {
+    const name = v.regionName.trim();
+    if (!name) return null;
+    return regions.find((r) => r.name === name) ?? null;
+  }, [regions, v.regionName]);
+
+  const isRegionValid = !!regionMatch;
+  const kanaValue = v.kana.trim();
+  const isKanaValid = !!kanaValue && isHiragana(kanaValue);
+
+  const regionError = v.regionName && !isRegionValid ? "存在しない地域名です" : "";
+  const kanaError = v.kana && !isKanaValid ? "ひらがなで入力してください" : "";
+
   const serial = useMemo(() => serialPreviewRightDots(v.serialRaw), [v.serialRaw]);
 
   const canSubmit =
-    !!v.regionId &&
-    !!v.regionName &&
+    isRegionValid &&
+    !!regionMatch?.id &&
     !!v.classNumber &&
-    !!v.kana &&
+    isKanaValid &&
     !!v.color &&
     digitsOnly4(v.serialRaw).length >= 1; // ✅ 4桁必須
 
   const isPristine =
-    !v.regionId &&
+    !v.regionName &&
     !v.classNumber &&
     !v.kana &&
     !v.color &&
@@ -190,10 +207,9 @@ export default function PlateRegisterModal({
   const isDirty = !isPristine;
 
   const previewSvg = useMemo(() => {
-    const regionName = v.regionName || "";
+    const regionName = (regionMatch?.name ?? v.regionName) || "";
     const classNumber = v.classNumber || "";
-    const kana = v.kana || "";
-
+    const kana = kanaValue || "";
     const serialForSvg = serial; // ✅ "・・・3" などをそのまま渡す
 
     const c: PlateColor = (v.color || "white") as PlateColor;
@@ -220,68 +236,70 @@ export default function PlateRegisterModal({
     onClose();
   };
 
-  const handlePickRegion = (regionId: string) => {
-    const r = regions.find((x) => x.id === regionId);
-    setV((p) => ({
-      ...p,
-      regionId,
-      regionName: r?.name ?? "",
-    }));
-    setDupMsg("");
-  };
-
   const submit = async () => {
-  if (!canSubmit || done) return;
+    if (done) return;
+    if (!isRegionValid || !isKanaValid || !canSubmit) return;
 
-  if (!userId) {
-    setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
-    return;
-  }
-
-  const serialValue = serialForSave(v.serialRaw);
-  if (!serialValue) return;
-
-  const color = v.color as PlateColor;
-
-  const svg = fixSvgViewBox(
-    renderPlateSvg({
-      regionName: v.regionName,
-      classNumber: v.classNumber,
-      kana: v.kana,
-      serial: serialValue,
-      color,
-    })
-  );
-
-  const plate: Plate = {
-    id: crypto.randomUUID(),
-    regionId: v.regionId,
-    classNumber: v.classNumber,
-    kana: v.kana,
-    serial: serialValue,
-    color,
-    renderSvg: svg,
-    createdAt: new Date().toISOString(),
-  };
-
-  try {
-    await addPlateCloud(userId, plate);
-
-    onRegistered(v.regionName);
-    setDone(true);
-    setDupMsg("");
-  } catch (e: any) {
-    const msg = String(e?.message ?? "");
-
-    // ✅ unique index 違反を「すでに登録済み」に変換
-    if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
-      setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
+    if (!userId) {
+      setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
       return;
     }
 
-    setDupMsg(msg || "保存に失敗しました");
-  }
-};
+    const serialValue = serialForSave(v.serialRaw);
+    if (!serialValue) return;
+
+    const color = v.color as PlateColor;
+
+    const svg = fixSvgViewBox(
+      renderPlateSvg({
+        regionName: regionMatch?.name ?? v.regionName.trim(),
+        classNumber: v.classNumber,
+        kana: kanaValue,
+        serial: serialValue,
+        color,
+      })
+    );
+
+    const plate: Plate = {
+      id: crypto.randomUUID(),
+      regionId: regionMatch?.id ?? v.regionId,
+      classNumber: v.classNumber,
+      kana: kanaValue,
+      serial: serialValue,
+      color,
+      renderSvg: svg,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      // 🔑 regionId を PrefModal と完全一致させる
+      const regionId = `${regionMatch.pref}:${regionMatch.name}`;
+
+      const plateFixed = {
+        ...plate,
+        regionId,                    // ← ここが最重要
+        regionName: regionMatch.name,
+        prefName: regionMatch.pref,
+      };
+
+      console.log("SAVE userId", userId, "regionId", regionId);
+
+      await addPlateCloud(userId, plateFixed);
+
+      onRegistered(regionMatch?.name ?? v.regionName.trim()); setDone(true);
+      setDupMsg("");
+    } catch (e: any) {
+      const msg = String(e?.message ?? "");
+
+      // ✅ unique index 違反を「すでに登録済み」に変換
+      if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+        setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
+        return;
+      }
+
+      setDupMsg(msg || "保存に失敗しました");
+    }
+  };
 
 
   return (
@@ -361,12 +379,36 @@ export default function PlateRegisterModal({
         {/* 入力欄：2カラム */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="地域">
-            <Select
-              value={v.regionId}
-              onChange={(x) => handlePickRegion(x)}
-              placeholder="選択"
-              options={regionOptions.map((o) => ({ value: o.value, label: o.label }))}
+            <input
+              value={v.regionName}
+              onChange={(e) => {
+                const next = e.target.value;
+                const match = regions.find((r) => r.name === next.trim());
+                setV((p) => ({
+                  ...p,
+                  regionName: next,
+                  regionId: match?.id ?? "",
+                }));
+                setDupMsg("");
+              }}
+              list="region-options"
+              placeholder="（例）品川"
+              style={{
+                width: "100%",
+                height: 44,
+                borderRadius: 12,
+                border: "2px solid #e5e7eb",
+                padding: "0 12px",
+                fontSize: 16,
+                outline: "none",
+                background: "#fff",
+                boxSizing: "border-box",
+              }}
             />
+
+            {regionError && (
+              <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>{regionError}</div>
+            )}
           </Field>
 
           <Field label="分類番号">
@@ -378,7 +420,7 @@ export default function PlateRegisterModal({
               }}
               type="tel"
               inputMode="numeric"
-              placeholder="(例) 300"
+              placeholder="（例）582"
               style={{
                 width: "100%",
                 height: 44,
@@ -394,12 +436,26 @@ export default function PlateRegisterModal({
           </Field>
 
           <Field label="ひらがな">
-            <Select
+            <input
               value={v.kana}
-              onChange={(x) => setV((p) => ({ ...p, kana: x }))}
-              placeholder="選択"
-              options={KANAS.map((x) => ({ value: x, label: x }))}
+              onChange={(e) => setV((p) => ({ ...p, kana: e.target.value }))}
+              list="kana-options"
+              placeholder="（例）あ"
+              style={{
+                width: "100%",
+                height: 44,
+                borderRadius: 12,
+                border: "2px solid #e5e7eb",
+                padding: "0 12px",
+                fontSize: 16,
+                outline: "none",
+                background: "#fff",
+                boxSizing: "border-box",
+              }}
             />
+            {kanaError && (
+              <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>{kanaError}</div>
+            )}
           </Field>
 
           <Field label="色">

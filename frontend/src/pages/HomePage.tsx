@@ -217,8 +217,7 @@ export default function HomePage() {
     <div className="container">
       <div className="header">
         <div>
-          <h2 style={{ margin: 0 }}>ナンバープレート</h2>
-          <div className="small">地域を記録して、地図を塗りつぶす</div>
+          <h2 style={{ margin: 0 }}>𝑪𝒂𝒓_𝑴𝒂𝒑𝒑𝒊𝒏𝒈</h2>
         </div>
 
         <div className="header-actions">
@@ -319,30 +318,6 @@ export default function HomePage() {
       </div>
 
       <div className="stack">
-        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-          <button
-            className="btn"
-            style={{
-              width: "100%",
-              height: 52,
-              borderRadius: 14,
-              border: "none",
-              fontSize: 21,
-              fontWeight: "bold",
-              textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
-              color: "#fff",
-              boxShadow: "0 6px 16px #a2d7dd",
-              backgroundImage:
-                "radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
-              opacity: 0.7,
-            }}
-            onClick={() => setPlateOpen(true)}
-            disabled={!userId} // ✅ userId確定前は押せない
-            title={!userId ? "ログイン確認中..." : ""}
-          >
-            ナンバープレートを登録
-          </button>
-        </div>
 
         <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
 
@@ -382,6 +357,30 @@ export default function HomePage() {
         onClose={() => setHelpOpen(false)}
         onClearAll={handleClearAll}
       />
+      <div style={{ display: "flex", gap: 10, marginBottom: 12, paddingTop:10 }}>
+          <button
+            className="btn"
+            style={{
+              width: "100%",
+              height: 100,
+              borderRadius: 14,
+              border: "none",
+              fontSize: 21,
+              fontWeight: "bold",
+              textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
+              color: "#fff",
+              boxShadow: "0 6px 16px #a2d7dd",
+              backgroundImage:
+                "radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
+              opacity: 0.7,
+            }}
+            onClick={() => setPlateOpen(true)}
+            disabled={!userId} // ✅ userId確定前は押せない
+            title={!userId ? "ログイン確認中..." : ""}
+          >
+            ナンバープレートを登録
+          </button>
+        </div>
     </div >
   );
 }

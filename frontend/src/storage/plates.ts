@@ -19,15 +19,32 @@ function key(userId: string) {
 }
 
 function loadAll(userId: string): Plate[] {
-  try {
-    const raw = localStorage.getItem(key(userId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+  const keyNew = `plates:${userId}`;
+  const keyOld = `plates`; // ← 旧仕様がこれだった場合
+
+  const read = (key: string) => {
+    try {
+      return JSON.parse(localStorage.getItem(key) || "[]") as Plate[];
+    } catch {
+      return [];
+    }
+  };
+
+  const arrNew = read(keyNew);
+  if (arrNew.length > 0) return arrNew;
+
+  // ✅ 新キーが空なら旧キーも見る（移行期間）
+  const arrOld = read(keyOld);
+
+  // （任意）旧 → 新へ移行しておくと次回から速い
+  if (arrOld.length > 0) {
+    localStorage.setItem(keyNew, JSON.stringify(arrOld));
+    // localStorage.removeItem(keyOld); // 消したいなら
   }
+
+  return arrOld;
 }
+
 
 function saveAll(userId: string, plates: Plate[]) {
   localStorage.setItem(key(userId), JSON.stringify(plates));

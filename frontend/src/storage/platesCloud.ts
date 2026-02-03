@@ -43,3 +43,30 @@ export async function addPlateCloud(userId: string, plate: Plate) {
 
   if (error) throw error;
 }
+
+export type PlateRow = {
+  id: string;
+  user_id: string;
+  region_id: string;
+  class_number: string | number;
+  kana: string;
+  serial: string;
+  color: string;
+  render_svg: string;
+  created_at: string;
+};
+
+export async function listPlatesCloudByRegionId(
+  userId: string,
+  regionId: string
+): Promise<PlateRow[]> {
+  const { data, error } = await supabase
+    .from("plates")
+    .select("id,user_id,region_id,class_number,kana,serial,color,render_svg,created_at")
+    .eq("user_id", userId)
+    .eq("region_id", regionId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as PlateRow[];
+}
