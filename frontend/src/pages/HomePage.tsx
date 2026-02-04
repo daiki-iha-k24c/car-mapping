@@ -46,13 +46,22 @@ export default function HomePage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const { userId, loading } = useUser();
   const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
+  const { username } = useUser();
+
+  {
+    !loading && !username && (
+      <div className="card" style={{ padding: 12, marginBottom: 12 }}>
+        ユーザーネームが未設定です。
+        <button className="btn" onClick={() => navigate("/onboarding")}>設定する</button>
+      </div>
+    )
+  }
 
 
   // ✅ ホームから開く登録モーダル
   const [plateOpen, setPlateOpen] = useState(false);
 
   // ✅ localStorage分離に使う userId（Supabase user.id）
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
 
   const [me, setMe] = useState<{ username: string | null; avatar_url: string | null } | null>(null);
 
@@ -98,7 +107,6 @@ export default function HomePage() {
         return;
       }
 
-      setAuthUserId(user.id);
     })().catch(console.error);
   }, [navigate]);
 
@@ -240,7 +248,7 @@ export default function HomePage() {
                 borderRadius: "10px",
               }}
             >
-              
+
               <img
                 src={me.avatar_url || "/avatar-default.png"}
                 alt="avatar"

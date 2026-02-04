@@ -6,7 +6,7 @@ import { useUser } from "../context/UserContext";
 type ProfileRow = {
   user_id: string;
   username: string;
-  avatar_url: string | null;
+  avatar_url: string | null; // DBには storage path（または互換で http/data の可能性）
 };
 
 type FollowRow = {
@@ -14,8 +14,29 @@ type FollowRow = {
   following_id: string;
 };
 
+const AVATAR_BUCKET = "avatars";
+
+function isLikelyHttpUrl(s: string) {
+  return /^https?:\/\//i.test(s);
+}
+function isDataUrl(s: string) {
+  return /^data:image\//i.test(s);
+}
+
+function avatarToPublicUrl(avatarUrlOrPath: string | null) {
+  if (!avatarUrlOrPath) return null;
+
+  // 互換：昔の http URL / dataURL が残ってても表示できるようにする
+  if (isLikelyHttpUrl(avatarUrlOrPath) || isDataUrl(avatarUrlOrPath)) return avatarUrlOrPath;
+
+  // 新方式：storage path -> public URL
+  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarUrlOrPath);
+  return data.publicUrl ?? null;
+}
+
 export default function FriendsPage() {
   const { userId, username: myName, avatarUrl: myAvatar, loading } = useUser();
+
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchErr, setSearchErr] = useState<string | null>(null);
@@ -76,7 +97,6 @@ export default function FriendsPage() {
     setSearchErr(null);
 
     try {
-      // ilike は PostgreSQL の case-insensitive
       const { data, error } = await supabase
         .from("profiles")
         .select("user_id, username, avatar_url")
@@ -136,13 +156,15 @@ export default function FriendsPage() {
   };
 
   const friendsList = useMemo(() => {
-    // 相互（友達）: 自分→相手 & 相手→自分
     const out: string[] = [];
     for (const uid of myFollowing) {
       if (myFollowers.has(uid)) out.push(uid);
     }
     return out;
   }, [myFollowing, myFollowers]);
+
+  // ✅ 表示用：自分のアイコンURL
+  const myAvatarSrc = useMemo(() => avatarToPublicUrl(myAvatar ?? null), [myAvatar]);
 
   if (loading) {
     return <div className="container" style={{ padding: 16, opacity: 0.7 }}>読み込み中...</div>;
@@ -175,8 +197,12 @@ export default function FriendsPage() {
                   color: "#6b7280",
                 }}
               >
-                {myAvatar ? (
-                  <img src={myAvatar} alt="あなたのアイコン" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {myAvatarSrc ? (
+                  <img
+                    src={myAvatarSrc}
+                    alt="あなたのアイコン"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
                 ) : (
                   <span>{myName?.slice(0, 1) || "?"}</span>
                 )}
@@ -234,6 +260,9 @@ export default function FriendsPage() {
             {results.map((p) => {
               const isFollowing = myFollowing.has(p.user_id);
               const isFriend = isFollowing && myFollowers.has(p.user_id);
+
+              const avatarSrc = avatarToPublicUrl(p.avatar_url);
+
               return (
                 <div
                   key={p.user_id}
@@ -266,9 +295,9 @@ export default function FriendsPage() {
                           color: "#6b7280",
                         }}
                       >
-                        {p.avatar_url ? (
+                        {avatarSrc ? (
                           <img
-                            src={p.avatar_url}
+                            src={avatarSrc}
                             alt={`${p.username}のアイコン`}
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                           />
@@ -278,23 +307,19 @@ export default function FriendsPage() {
                       </span>
                       <span>{p.username}</span>
                       {isFriend && (
-                        <span style={{
-                          fontSize: 11,
-                          padding: "4px 8px",
-                          borderRadius: 999,
-                          border: "1px solid #e5e7eb",
-                          background: "#f8fafc",
-                        }}>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            padding: "4px 8px",
+                            borderRadius: 999,
+                            border: "1px solid #e5e7eb",
+                            background: "#f8fafc",
+                          }}
+                        >
                           相互
                         </span>
                       )}
                     </div>
-
-                    {/* <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-                      <Link to={`/u/${encodeURIComponent(p.username)}`} className="btn" style={{ textDecoration: "none" }}>
-                        地図を見る
-                      </Link>
-                    </div> */}
                   </div>
 
                   <div style={{ display: "flex", gap: 8 }}>
@@ -314,8 +339,6 @@ export default function FriendsPage() {
           </div>
         )}
 
-        {/* 相互フレンド一覧（user_idだけだと味気ないので username も出すなら追加読みが必要）
-            → まずは「検索結果から地図を見る」で運用できる形にしてる */}
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
           相互（友達）数：{loadingFollows ? "…" : friendsList.length}
         </div>

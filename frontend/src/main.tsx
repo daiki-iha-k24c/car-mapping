@@ -33,12 +33,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   
-  <React.StrictMode>
     <BrowserRouter>
       <ErrorBoundary>
       <App />
     </ErrorBoundary>
     </BrowserRouter>
-  </React.StrictMode>
 );
 
