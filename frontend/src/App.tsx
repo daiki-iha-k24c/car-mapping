@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import HomePage from "./pages/HomePage";
 import RegionListPage from "./pages/RegionListPage";
 import RegionPage from "./pages/RegionPage";
@@ -17,6 +18,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <UserProvider>
+      <Analytics />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
