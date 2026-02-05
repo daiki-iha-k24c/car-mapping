@@ -7,10 +7,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Supabase env が未設定です（VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY）");
 }
 
+console.log("VITE_SUPABASE_URL =", import.meta.env.VITE_SUPABASE_URL);
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
+  
 });
