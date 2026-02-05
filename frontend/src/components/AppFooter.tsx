@@ -9,13 +9,12 @@ export default function AppFooter() {
         fontSize: 12,
         opacity: 0.8,
         display: "flex",
-        justifyContent: "space-between",
+        justifyContent: "center",
         alignItems: "center",
         borderTop: "1px solid rgba(0,0,0,0.08)",
         marginTop: 16,
       }}
     >
-      <span>ナンバープレート</span>
 
       <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <span>{APP_VERSION}</span>
