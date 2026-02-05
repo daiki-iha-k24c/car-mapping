@@ -35,8 +35,8 @@ export default function SerialCollectionPage() {
   // ★4列固定レイアウト
   const columnCount = 4;
   const gap = 12;
-  const cellW = 60;
-  const cellH = 30;
+  const cellW = 70;
+  const cellH = 38;
 
   const rowCount = Math.ceil(TOTAL / columnCount);
   const gridW = columnCount * (cellW + gap) + gap;
