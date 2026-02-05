@@ -5,7 +5,7 @@ import { useUser } from "../context/UserContext";
 
 const USERNAME_MIN = 2;
 const USERNAME_MAX = 16;
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024; // 512KB
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const AVATAR_BUCKET = "avatars";
 
 function normalizeUsername(s: string) {
