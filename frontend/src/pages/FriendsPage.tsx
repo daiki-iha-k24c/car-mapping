@@ -22,11 +22,37 @@ type FriendItem = {
   friendshipId: number;
   other: Profile;
   status: "pending" | "accepted";
-  direction: "outgoing" | "incoming"; // pending判定に使う
+  direction: "outgoing" | "incoming";
+};
+
+type FriendStats = {
+  achieved_regions: number;
+  achieved_numbers: number;
+  total_plates: number;
 };
 
 function debounceWait(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: 10,
+        borderRadius: 12,
+        border: "1px solid rgba(0,0,0,0.08)",
+      }}
+    >
+      <div style={{ fontWeight: 700 }}>{label}</div>
+      <div style={{ fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
+        {value}
+      </div>
+    </div>
+  );
 }
 
 export default function FriendPage() {
@@ -45,6 +71,16 @@ export default function FriendPage() {
 
   // 追加/承認/削除の処理中
   const [busyId, setBusyId] = useState<string | number | null>(null);
+
+  // info modal
+  const TOTAL_REGIONS = 133;
+  const TOTAL_NUMBERS = 9999;
+
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoUser, setInfoUser] = useState<Profile | null>(null);
+  const [infoLoading, setInfoLoading] = useState(false);
+  const [infoError, setInfoError] = useState<string | null>(null);
+  const [infoStats, setInfoStats] = useState<FriendStats | null>(null);
 
   // 自分のフレンド関係をロード
   async function loadFriends() {
@@ -66,7 +102,6 @@ export default function FriendPage() {
       const rows = data ?? [];
       if (rows.length === 0) {
         setFriends([]);
-        setFriendsLoading(false);
         return;
       }
 
@@ -120,12 +155,41 @@ export default function FriendPage() {
     }
   }
 
+  async function openInfo(p: Profile) {
+    setInfoOpen(true);
+    setInfoUser(p);
+    setInfoLoading(true);
+    setInfoError(null);
+    setInfoStats(null);
+
+    try {
+      const { data, error } = await supabase.rpc("get_friend_stats", {
+        target_user: p.user_id,
+      });
+
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error("統計が取得できませんでした");
+
+      setInfoStats({
+        achieved_regions: Number(row.achieved_regions ?? 0),
+        achieved_numbers: Number(row.achieved_numbers ?? 0),
+        total_plates: Number(row.total_plates ?? 0),
+      });
+    } catch (e: any) {
+      setInfoError(e?.message ?? "情報取得に失敗しました");
+    } finally {
+      setInfoLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadFriends();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  // 検索（username 前方/部分一致）
+  // 検索（username 部分一致）
   useEffect(() => {
     let cancelled = false;
 
@@ -136,18 +200,17 @@ export default function FriendPage() {
       if (!keyword) {
         setResults([]);
         setSearchError(null);
+        setSearching(false);
         return;
       }
 
       setSearching(true);
       setSearchError(null);
 
-      // 入力中のチラつき防止に軽くデバウンス
       await debounceWait(250);
       if (cancelled) return;
 
       try {
-        // 自分自身は除外
         const { data, error } = await supabase
           .from("profiles")
           .select("user_id,username,avatar_url")
@@ -185,7 +248,7 @@ export default function FriendPage() {
     if (!userId) return;
     if (targetUserId === userId) return;
 
-    // ペア重複を減らすために、UUID文字列をソートして常に同じ向きで入れる運用
+    // UUID文字列ソートで向きを固定（ペア重複を減らす）
     const [a, b] = [userId, targetUserId].sort();
     const user_id = a;
     const friend_id = b;
@@ -200,7 +263,7 @@ export default function FriendPage() {
       if (error) throw error;
 
       await loadFriends();
-      setQ(""); // ついでにクリア
+      setQ("");
       setResults([]);
     } catch (e: any) {
       alert(e?.message ?? "申請に失敗しました");
@@ -246,7 +309,16 @@ export default function FriendPage() {
 
   return (
     <div className="container" style={{ maxWidth: 720 }}>
-      <h2 style={{ marginTop: 0 }}>フレンド</h2>
+      <div className="header">
+        <div>
+          <h2 style={{ margin: 0 }}>フレンド</h2>
+        </div>
+        <div className="header-actions">
+          <Link to="/" className="btn">
+            ホームへ戻る
+          </Link>
+        </div>
+      </div>
 
       {/* 検索 */}
       <div
@@ -262,7 +334,7 @@ export default function FriendPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="ユーザーネームで検索（例：しながわ）"
+          placeholder="ユーザーネームで検索"
           style={{
             width: "100%",
             padding: "10px 12px",
@@ -272,9 +344,7 @@ export default function FriendPage() {
           }}
         />
 
-        {searchError && (
-          <div style={{ marginTop: 8, color: "#b00020" }}>{searchError}</div>
-        )}
+        {searchError && <div style={{ marginTop: 8, color: "#b00020" }}>{searchError}</div>}
 
         {(searching || results.length > 0) && (
           <div style={{ marginTop: 10 }}>
@@ -326,9 +396,9 @@ export default function FriendPage() {
                     </div>
 
                     {already ? (
-                      <Link className="btn" to={`/u/${p.username}`}>
-                        地図を見る
-                      </Link>
+                      <button className="btn" disabled>
+                        追加済み
+                      </button>
                     ) : (
                       <button
                         className="btn"
@@ -422,9 +492,9 @@ export default function FriendPage() {
 
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {f.status === "accepted" ? (
-                      <Link className="btn" to={`/u/${f.other.username}`}>
-                        地図を見る
-                      </Link>
+                      <button className="btn" onClick={() => openInfo(f.other)}>
+                        情報
+                      </button>
                     ) : incoming ? (
                       <button
                         className="btn"
@@ -454,6 +524,65 @@ export default function FriendPage() {
           </div>
         )}
       </div>
+
+      {/* 情報モーダル */}
+      {infoOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 3000,
+          }}
+          onClick={() => setInfoOpen(false)}
+        >
+          <div
+            style={{
+              width: "min(520px, 100%)",
+              background: "#fff",
+              borderRadius: 16,
+              padding: 16,
+              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>
+                {infoUser?.username ?? "情報"}
+              </div>
+              <button className="btn" onClick={() => setInfoOpen(false)}>
+                閉じる
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              {infoLoading ? (
+                <div style={{ opacity: 0.7 }}>取得中…</div>
+              ) : infoError ? (
+                <div style={{ color: "#b00020" }}>{infoError}</div>
+              ) : infoStats ? (
+                <div style={{ display: "grid", gap: 10 }}>
+                  <StatRow
+                    label="達成地域数"
+                    value={`${infoStats.achieved_regions}/${TOTAL_REGIONS}`}
+                  />
+                  <StatRow
+                    label="達成ナンバー数"
+                    value={`${infoStats.achieved_numbers}/${TOTAL_NUMBERS}`}
+                  />
+                  <StatRow label="総登録プレート数" value={`${infoStats.total_plates}`} />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
