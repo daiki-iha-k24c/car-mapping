@@ -33,7 +33,7 @@ export default function SignUpPage() {
       }
 
       // ✅ 成功した時だけ遷移（自動では飛ばない）
-      nav("/onboarding", { replace: true });
+      nav("/Onboarding", { replace: true });
     } catch (e: any) {
       setErr(e?.message ?? "新規登録に失敗しました");
     } finally {

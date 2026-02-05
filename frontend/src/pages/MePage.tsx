@@ -96,7 +96,7 @@ export default function MePage() {
       const { data: sess } = await supabase.auth.getSession();
       const user = sess.session?.user;
       if (!user) {
-        navigate("/onboarding");
+        navigate("/Onboarding");
         return;
       }
 
@@ -248,7 +248,7 @@ export default function MePage() {
       setErr(error.message);
       return;
     }
-    navigate("/onboarding");
+    navigate("/Onboarding");
   }
 
   async function logout() {

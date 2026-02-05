@@ -24,7 +24,7 @@ function isProbablyReserved(name: string) {
     "me",
     "login",
     "signup",
-    "onboarding",
+    "Onboarding",
   ].includes(n);
 }
 

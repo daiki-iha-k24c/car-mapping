@@ -53,7 +53,7 @@ export default function HomePage() {
     !loading && !username && (
       <div className="card" style={{ padding: 12, marginBottom: 12 }}>
         ユーザーネームが未設定です。
-        <button className="btn" onClick={() => navigate("/onboarding")}>設定する</button>
+        <button className="btn" onClick={() => navigate("/Onboarding")}>設定する</button>
       </div>
     )
   }
@@ -104,7 +104,7 @@ export default function HomePage() {
       if (error) throw error;
 
       if (!profile?.username) {
-        navigate("/onboarding");
+        navigate("/Onboarding");
         return;
       }
 
@@ -317,6 +317,14 @@ export default function HomePage() {
                   onClick={() => setMenuOpen(false)}
                 >
                   🗾みんなで埋める日本地図
+                </Link>
+
+                <Link
+                  to="/collection"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  🗾ナンバーコレクション
                 </Link>
 
                 <Link

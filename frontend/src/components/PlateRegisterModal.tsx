@@ -3,6 +3,8 @@ import type { Region } from "../lib/region";
 import type { Plate, PlateColor } from "../storage/plates";
 import { addPlateCloud } from "../storage/platesCloud";
 import { renderPlateSvg } from "../svg/renderPlateSvg";
+import { normalizeSerial4, formatSerial4 } from "../lib/serial4";
+import { supabase } from "../lib/supabaseClient";
 
 export type PlateRegisterModalProps = {
   open: boolean;
@@ -152,6 +154,35 @@ function fitSvgToBox(svg: string) {
   return s;
 }
 
+async function collectSerialOnce(params: {
+  regionName: string;
+  classNumber: string;
+  kana: string;
+  serialRaw: string;      // 達成判定用（数字だけでもOK）
+  serialDisplay: string;  // ★表示用（"・・・1" / "12-34"）
+  color: any;             // PlateColor
+}) {
+  const serial4 = normalizeSerial4(params.serialRaw);
+  if (!serial4) throw new Error("下4桁が不正です（0〜4桁の数字で入力してね）");
+
+  // ★表示は「登録時の見た目」を優先
+  const svg = renderPlateSvg({
+    regionName: params.regionName,
+    classNumber: params.classNumber,
+    kana: params.kana,
+    serial: params.serialDisplay, // ←ここが重要
+    color: params.color,
+  });
+
+  const { data, error } = await supabase.rpc("collect_serial_once", {
+    p_serial4: serial4,
+    p_first_plate_svg: svg,
+  });
+
+  if (error) throw error;
+  return { serial4, isFirst: !!data };
+}
+
 
 
 export default function PlateRegisterModal({
@@ -284,14 +315,30 @@ export default function PlateRegisterModal({
 
       console.log("SAVE userId", userId, "regionId", regionId);
 
+      // ① まずプレート保存（今まで通り）
       await addPlateCloud(userId, plateFixed);
 
-      onRegistered(regionMatch?.name ?? v.regionName.trim()); setDone(true);
+      // ② 4桁コレクション登録（ここが追加）
+      // v.serialRaw は digitsOnly4 済みで "0〜4桁数字" になってるのでそのまま使える
+      const { serial4, isFirst } = await collectSerialOnce({
+        regionName: regionMatch?.name ?? v.regionName.trim(),
+        classNumber: v.classNumber,
+        kana: kanaValue,
+        serialRaw: v.serialRaw,      // 達成判定用（数字だけ）
+        serialDisplay: serialValue,  // ★見た目は登録したもの
+        color,
+      });
+
+
+      // 任意：メッセージ出したいなら
+      // setDupMsg(isFirst ? `新規コレクション！ ${serial4}` : `既に達成済み：${serial4}`);
+
+      onRegistered(regionMatch?.name ?? v.regionName.trim());
+      setDone(true);
       setDupMsg("");
     } catch (e: any) {
       const msg = String(e?.message ?? "");
 
-      // ✅ unique index 違反を「すでに登録済み」に変換
       if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
         setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
         return;
@@ -299,6 +346,7 @@ export default function PlateRegisterModal({
 
       setDupMsg(msg || "保存に失敗しました");
     }
+
   };
 
 

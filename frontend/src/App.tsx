@@ -13,6 +13,8 @@ import GroupMapPage from "./pages/GroupMapPage";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SerialCollectionPage from "./pages/SerialCollectionPage";
+
 
 export default function App() {
   return (
@@ -25,7 +27,7 @@ export default function App() {
           <ProtectedRoute>
             <HomePage />
           </ProtectedRoute>
-          } />
+        } />
         <Route path="/regions" element={<RegionListPage />} />
 
         {/* 追加 */}
@@ -41,7 +43,16 @@ export default function App() {
           <ProtectedRoute>
             <MePage />
           </ProtectedRoute>
-          } />
+        } />
+        <Route
+          path="/collection"
+          element={
+            <ProtectedRoute>
+              <SerialCollectionPage />
+            </ProtectedRoute>
+          }
+        />
+
 
         <Route path="/u/:username" element={<UserMapPage />} />
         <Route path="/ranking" element={<RankingPage />} />
@@ -50,8 +61,8 @@ export default function App() {
           <ProtectedRoute>
             <GroupMapPage />
           </ProtectedRoute>
-          } />
-         <Route path="*" element={<Navigate to="/" replace />} />
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </UserProvider>
   );

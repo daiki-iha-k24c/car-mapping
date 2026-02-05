@@ -48,8 +48,8 @@ export default function ProtectedRoute({ children }: { children: JSX.Element }) 
 
   // ✅ 取得できた上で username が無いなら本当に未設定 → onboardingへ
   // loading中は飛ばさない（キャッシュ表示中に誤爆しやすい）
-  if (!loading && profileStatus === "ready" && !username && loc.pathname !== "/onboarding") {
-    return <Navigate to="/onboarding" replace />;
+  if (!loading && profileStatus === "ready" && !username && loc.pathname !== "/Onboarding") {
+    return <Navigate to="/Onboarding" replace />;
   }
 
   return children;
