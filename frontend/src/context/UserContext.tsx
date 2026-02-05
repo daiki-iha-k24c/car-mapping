@@ -16,11 +16,9 @@ type UserState = {
   username: string | null;
   avatarUrl: string | null;
 
-  // ✅ 追加：セッション復元中フラグ（ここがないと復帰で /login に飛ぶ）
   authChecking: boolean;
 
-  // 既存
-  loading: boolean; // ←これはプロフィール取得中などに使っててOK（ただしガードには使わない）
+  loading: boolean;
   profileStatus: ProfileStatus;
 
   retryProfile: () => Promise<void>;
@@ -87,75 +85,75 @@ type ProfileRow = { username: string | null; avatar_url: string | null };
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
 
-  // ✅ ここは「復帰体験」を良くするため、キャッシュがあればそれを初期値にする
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>("loading");
 
   const lastRetryAtRef = useRef<number>(0);
-  const [authChecking, setAuthChecking] = useState(true);
 
   const hydrateFromCache = useCallback((uid: string) => {
     const cached = readProfileCache(uid);
     if (!cached) return;
-
-    // ✅ すでに表示できる情報があるなら即反映
     if (cached.username !== undefined) setUsername(cached.username ?? null);
     if (cached.avatarUrl !== undefined) setAvatarUrl(cached.avatarUrl ?? null);
   }, []);
 
-  const loadProfile = useCallback(async (uid: string) => {
-    setProfileStatus("loading");
+  const loadProfile = useCallback(
+    async (uid: string) => {
+      setProfileStatus("loading");
 
-    // まずキャッシュから即復元（通信待ちしない）
-    hydrateFromCache(uid);
+      // まずキャッシュから即復元
+      hydrateFromCache(uid);
 
-    try {
-      const { data, error } = await withTimeout(
-        asPromise<{ data: ProfileRow | null; error: any }>(
-          supabase
-            .from("profiles")
-            .select("username, avatar_url")
-            .eq("user_id", uid)
-            .maybeSingle<ProfileRow>()
-        ),
-        8000
-      );
+      try {
+        const { data, error } = await withTimeout(
+          asPromise<{ data: ProfileRow | null; error: any }>(
+            supabase
+              .from("profiles")
+              .select("username, avatar_url")
+              .eq("user_id", uid)
+              .maybeSingle<ProfileRow>()
+          ),
+          8000
+        );
 
-      if (error) {
-        console.warn("profiles read error:", error);
-        // ✅ 重要：ここで username/avatarUrl を null にしない（UI維持）
+        if (error) {
+          console.warn("profiles read error:", error);
+          // ✅ UI維持（userIdは落とさない）
+          setProfileStatus("error");
+          return;
+        }
+
+        // ✅ ここが重要：プロフィール行が無い → missing
+        if (!data) {
+          setUsername(null);
+          setAvatarUrl(null);
+          setProfileStatus("missing");
+          return;
+        }
+
+        const nextUsername = data.username ?? null;
+        const nextAvatar = data.avatar_url ?? null;
+
+        setUsername(nextUsername);
+        setAvatarUrl(nextAvatar);
+
+        writeProfileCache(uid, { username: nextUsername, avatarUrl: nextAvatar });
+
+        setProfileStatus("ready");
+      } catch (e) {
+        console.warn("profiles read timeout/error:", e);
+        // ✅ UI維持（userIdは落とさない）
         setProfileStatus("error");
-        return;
       }
-
-      if (!data) { // ✅ 追加
-        setProfileStatus("missing");
-        setUsername(null);
-        setAvatarUrl(null);
-        return;
-      }
-
-      const nextUsername = data?.username ?? null;
-      const nextAvatar = data?.avatar_url ?? null;
-
-      setUsername(nextUsername);
-      setAvatarUrl(nextAvatar);
-
-      writeProfileCache(uid, { username: nextUsername, avatarUrl: nextAvatar });
-
-      setProfileStatus("ready");
-    } catch (e) {
-      console.warn("profiles read timeout/error:", e);
-      // ✅ 重要：ここでも UI は維持
-      setProfileStatus("error");
-    }
-  }, [hydrateFromCache]);
+    },
+    [hydrateFromCache]
+  );
 
   const retryProfile = useCallback(async () => {
-    // 復帰時に連打されるのを防ぐ（1.5秒以内は無視）
     const now = Date.now();
     if (now - lastRetryAtRef.current < 1500) return;
     lastRetryAtRef.current = now;
@@ -163,7 +161,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data } = await withTimeout(supabase.auth.getSession(), 8000);
       const uid = data.session?.user?.id;
-      if (!uid) return;
+
+      if (!uid) {
+        // ✅ 復帰失敗でも userId を“落とさない”
+        // （本当にログアウト確定は authChecking後に ProtectedRoute が判断）
+        setProfileStatus("error");
+        return;
+      }
 
       setUserId(uid);
       await loadProfile(uid);
@@ -176,11 +180,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let alive = true;
 
+    // ✅ 復帰最強：applySessionは「落とさない」
     const applySession = async (session: any) => {
-      // auth state change は頻繁に来るので、UIを壊さないよう慎重に
       setLoading(true);
       try {
         if (!session?.user) {
+          // ✅ ここだけはログアウト確定
           setUserId(null);
           setUsername(null);
           setAvatarUrl(null);
@@ -191,15 +196,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const uid = session.user.id as string;
         setUserId(uid);
 
-        // キャッシュで即表示→裏で最新化
+        // キャッシュ即表示→裏で最新化
         hydrateFromCache(uid);
         await loadProfile(uid);
       } catch (e) {
         console.warn("applySession error:", e);
-        // ログイン状態が確定で壊れてる時だけ落とす
-        setUserId(null);
-        setUsername(null);
-        setAvatarUrl(null);
+        // ✅ 重要：ここで userId を null にしない（復帰最強）
         setProfileStatus("error");
       } finally {
         if (alive) setLoading(false);
@@ -208,23 +210,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     // 初回ブートストラップ
     (async () => {
-      setAuthChecking(true);
+      setAuthChecking(true); // ✅ 追加：ここから復元期間
+
       try {
         // 1) ローカルから userId を復元（ネット不要）
         const localUid = readLocalSessionUserId();
         if (localUid) {
           setUserId(localUid);
           hydrateFromCache(localUid);
-          // ✅ ここで loading を false にして「即描画」を優先
-          // （裏で getSession / loadProfile が走る）
+          // 即描画優先
           if (alive) setLoading(false);
         }
 
-        // 2) 正規ルートでセッション取得（遅くてもOK）
+        // 2) 正規ルートでセッション取得
         const { data } = await withTimeout(supabase.auth.getSession(), 8000);
         if (!alive) return;
 
         const sess = data.session;
+
         if (!sess?.user) {
           // ローカル復元が無い場合だけ未ログイン確定
           if (!localUid) {
@@ -232,7 +235,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             setUsername(null);
             setAvatarUrl(null);
             setProfileStatus("loading");
-            setLoading(false);
           }
           return;
         }
@@ -241,13 +243,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setUserId(uid);
         hydrateFromCache(uid);
 
-        // ここから最新化
         await loadProfile(uid);
       } catch (e) {
         console.warn("auth bootstrap timeout/error:", e);
 
-        // ✅ 重要：ここで userId を null にしない（ログイン維持）
-        // ローカル復元が無い場合だけ未ログインにする
+        // ✅ 重要：ここでも userId を落とさない
+        // ローカル復元が無い場合だけ未ログイン扱い
         const localUid = readLocalSessionUserId();
         if (!localUid) {
           setUserId(null);
@@ -258,7 +259,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProfileStatus("error");
       } finally {
         if (!alive) return;
-        setAuthChecking(false);
+        setAuthChecking(false); // ✅ 追加：復元期間終了
         setLoading(false);
       }
     })();
@@ -270,9 +271,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.warn("auth change handler timeout/error:", e);
         if (!alive) return;
-        setUserId(null);
-        setUsername(null);
-        setAvatarUrl(null);
+        // ✅ ここでも userId を落とさない（復帰最強）
         setProfileStatus("error");
         setLoading(false);
       }
@@ -284,7 +283,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     };
   }, [hydrateFromCache, loadProfile]);
 
-  // ✅ iOS復帰対策：タブ/アプリに戻ったタイミングで裏で再同期
+  // ✅ iOS復帰対策：戻ったタイミングで裏で再同期
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === "visible") {
@@ -292,7 +291,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     };
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    window.addEventListener("pageshow", retryProfile);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pageshow", retryProfile);
+    };
   }, [retryProfile]);
 
   const value = useMemo(
@@ -305,7 +308,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       profileStatus,
       retryProfile,
     }),
-    [userId, username, avatarUrl, loading, authChecking, profileStatus, retryProfile] // ✅ authChecking追加
+    [userId, username, avatarUrl, loading, authChecking, profileStatus, retryProfile]
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
