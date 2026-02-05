@@ -9,18 +9,20 @@ import {
 } from "react";
 import { supabase } from "../lib/supabaseClient";
 
-type ProfileStatus = "loading" | "ready" | "error";
+type ProfileStatus = "loading" | "ready" | "missing" | "error";
 
 type UserState = {
   userId: string | null;
   username: string | null;
-  avatarUrl: string | null; // ✅ storage path（表示は getPublicUrl で変換）
-  loading: boolean;
+  avatarUrl: string | null;
 
-  // ✅ プロフィール取得状態（未設定と取得失敗を区別）
+  // ✅ 追加：セッション復元中フラグ（ここがないと復帰で /login に飛ぶ）
+  authChecking: boolean;
+
+  // 既存
+  loading: boolean; // ←これはプロフィール取得中などに使っててOK（ただしガードには使わない）
   profileStatus: ProfileStatus;
 
-  // ✅ プロフィール取得の再試行（ログインに戻さず復帰できる）
   retryProfile: () => Promise<void>;
 };
 
@@ -93,6 +95,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [profileStatus, setProfileStatus] = useState<ProfileStatus>("loading");
 
   const lastRetryAtRef = useRef<number>(0);
+  const [authChecking, setAuthChecking] = useState(true);
 
   const hydrateFromCache = useCallback((uid: string) => {
     const cached = readProfileCache(uid);
@@ -125,6 +128,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         console.warn("profiles read error:", error);
         // ✅ 重要：ここで username/avatarUrl を null にしない（UI維持）
         setProfileStatus("error");
+        return;
+      }
+
+      if (!data) { // ✅ 追加
+        setProfileStatus("missing");
+        setUsername(null);
+        setAvatarUrl(null);
         return;
       }
 
@@ -198,6 +208,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     // 初回ブートストラップ
     (async () => {
+      setAuthChecking(true);
       try {
         // 1) ローカルから userId を復元（ネット不要）
         const localUid = readLocalSessionUserId();
@@ -247,6 +258,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProfileStatus("error");
       } finally {
         if (!alive) return;
+        setAuthChecking(false);
         setLoading(false);
       }
     })();
@@ -289,10 +301,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       username,
       avatarUrl,
       loading,
+      authChecking,
       profileStatus,
       retryProfile,
     }),
-    [userId, username, avatarUrl, loading, profileStatus, retryProfile]
+    [userId, username, avatarUrl, loading, authChecking, profileStatus, retryProfile] // ✅ authChecking追加
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
