@@ -14,57 +14,70 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SerialCollectionPage from "./pages/SerialCollectionPage";
-
+import AppFooter from "./components/AppFooter";
 
 export default function App() {
   return (
     <UserProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        {/* 既存 */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        } />
-        <Route path="/regions" element={<RegionListPage />} />
+      <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-        {/* 追加 */}
-        <Route path="/region/:regionId" element={<RegionPage />} />
-        <Route
-          path="/region/:regionId/plates"
-          element={<RegionPlatesPage />}
-        />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              }
+            />
 
-        {/* フォールバック */}
-        <Route path="/Onboarding" element={<OnboardingPage />} />
-        <Route path="/me" element={
-          <ProtectedRoute>
-            <MePage />
-          </ProtectedRoute>
-        } />
-        <Route
-          path="/collection"
-          element={
-            <ProtectedRoute>
-              <SerialCollectionPage />
-            </ProtectedRoute>
-          }
-        />
+            <Route path="/regions" element={<RegionListPage />} />
+            <Route path="/region/:regionId" element={<RegionPage />} />
+            <Route path="/region/:regionId/plates" element={<RegionPlatesPage />} />
 
+            <Route path="/Onboarding" element={<OnboardingPage />} />
 
-        <Route path="/u/:username" element={<UserMapPage />} />
-        <Route path="/ranking" element={<RankingPage />} />
-        <Route path="/friends" element={<FriendsPage />} />
-        <Route path="/group" element={
-          <ProtectedRoute>
-            <GroupMapPage />
-          </ProtectedRoute>
-        } />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+            <Route
+              path="/me"
+              element={
+                <ProtectedRoute>
+                  <MePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/collection"
+              element={
+                <ProtectedRoute>
+                  <SerialCollectionPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="/u/:username" element={<UserMapPage />} />
+            <Route path="/ranking" element={<RankingPage />} />
+            <Route path="/friends" element={<FriendsPage />} />
+
+            <Route
+              path="/group"
+              element={
+                <ProtectedRoute>
+                  <GroupMapPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+
+        {/* ✅ 全ページ共通フッター */}
+        <AppFooter />
+      </div>
     </UserProvider>
   );
 }
-
