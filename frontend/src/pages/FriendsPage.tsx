@@ -3,349 +3,456 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useUser } from "../context/UserContext";
 
-type ProfileRow = {
+type Profile = {
   user_id: string;
   username: string;
-  avatar_url: string | null; // DBには storage path（または互換で http/data の可能性）
+  avatar_url: string | null;
 };
 
-type FollowRow = {
-  follower_id: string;
-  following_id: string;
+type FriendshipRow = {
+  id: number;
+  user_id: string;
+  friend_id: string;
+  status: "pending" | "accepted";
+  created_at: string;
+  accepted_at: string | null;
 };
 
-const AVATAR_BUCKET = "avatars";
+type FriendItem = {
+  friendshipId: number;
+  other: Profile;
+  status: "pending" | "accepted";
+  direction: "outgoing" | "incoming"; // pending判定に使う
+};
 
-function isLikelyHttpUrl(s: string) {
-  return /^https?:\/\//i.test(s);
-}
-function isDataUrl(s: string) {
-  return /^data:image\//i.test(s);
-}
-
-function avatarToPublicUrl(avatarUrlOrPath: string | null) {
-  if (!avatarUrlOrPath) return null;
-
-  // 互換：昔の http URL / dataURL が残ってても表示できるようにする
-  if (isLikelyHttpUrl(avatarUrlOrPath) || isDataUrl(avatarUrlOrPath)) return avatarUrlOrPath;
-
-  // 新方式：storage path -> public URL
-  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarUrlOrPath);
-  return data.publicUrl ?? null;
+function debounceWait(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-export default function FriendsPage() {
-  const { userId, username: myName, avatarUrl: myAvatar, loading } = useUser();
+export default function FriendPage() {
+  const { userId } = useUser();
 
+  // ------- friends list -------
+  const [friendsLoading, setFriendsLoading] = useState(true);
+  const [friendsError, setFriendsError] = useState<string | null>(null);
+  const [friends, setFriends] = useState<FriendItem[]>([]);
+
+  // ------- search -------
   const [q, setQ] = useState("");
   const [searching, setSearching] = useState(false);
-  const [searchErr, setSearchErr] = useState<string | null>(null);
-  const [results, setResults] = useState<ProfileRow[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [results, setResults] = useState<Profile[]>([]);
 
-  const [myFollowing, setMyFollowing] = useState<Set<string>>(new Set()); // 自分→相手
-  const [myFollowers, setMyFollowers] = useState<Set<string>>(new Set()); // 相手→自分（相互判定用）
-  const [loadingFollows, setLoadingFollows] = useState(false);
-  const [followErr, setFollowErr] = useState<string | null>(null);
+  // 追加/承認/削除の処理中
+  const [busyId, setBusyId] = useState<string | number | null>(null);
 
-  // ✅ 自分の follow 状態を読み込む（1回＋更新時）
-  const reloadFollows = async (uid: string) => {
-    setLoadingFollows(true);
-    setFollowErr(null);
-    try {
-      // 自分がフォローしてる相手
-      const { data: followingRows, error: e1 } = await supabase
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", uid);
-
-      if (e1) throw e1;
-
-      // 自分をフォローしてる相手（相互判定）
-      const { data: followerRows, error: e2 } = await supabase
-        .from("follows")
-        .select("follower_id")
-        .eq("following_id", uid);
-
-      if (e2) throw e2;
-
-      setMyFollowing(new Set((followingRows ?? []).map((r: any) => r.following_id)));
-      setMyFollowers(new Set((followerRows ?? []).map((r: any) => r.follower_id)));
-    } catch (e: any) {
-      console.error(e);
-      setFollowErr(e?.message ?? "フレンド情報の取得に失敗しました");
-    } finally {
-      setLoadingFollows(false);
-    }
-  };
-
-  useEffect(() => {
-    if (loading) return;
+  // 自分のフレンド関係をロード
+  async function loadFriends() {
     if (!userId) return;
-    reloadFollows(userId);
-  }, [userId, loading]);
 
-  // ✅ 検索（username 部分一致）
-  const doSearch = async () => {
-    if (!userId) return;
-    const keyword = q.trim();
-    if (!keyword) {
-      setResults([]);
-      return;
-    }
-
-    setSearching(true);
-    setSearchErr(null);
+    setFriendsLoading(true);
+    setFriendsError(null);
 
     try {
       const { data, error } = await supabase
+        .from("friendships")
+        .select("id,user_id,friend_id,status,created_at,accepted_at")
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
+        .order("created_at", { ascending: false })
+        .returns<FriendshipRow[]>();
+
+      if (error) throw error;
+
+      const rows = data ?? [];
+      if (rows.length === 0) {
+        setFriends([]);
+        setFriendsLoading(false);
+        return;
+      }
+
+      // 相手のuser_id一覧を作る
+      const otherIds = rows.map((r) => (r.user_id === userId ? r.friend_id : r.user_id));
+
+      // profiles をまとめて取る
+      const { data: profs, error: pErr } = await supabase
         .from("profiles")
-        .select("user_id, username, avatar_url")
-        .ilike("username", `%${keyword}%`)
-        .limit(20);
+        .select("user_id,username,avatar_url")
+        .in("user_id", otherIds)
+        .returns<Profile[]>();
 
-      if (error) throw error;
+      if (pErr) throw pErr;
 
-      // 自分自身は除外
-      const list = (data ?? []).filter((p: any) => p.user_id !== userId) as ProfileRow[];
-      setResults(list);
-    } catch (e: any) {
-      console.error(e);
-      setSearchErr(e?.message ?? "検索に失敗しました");
-    } finally {
-      setSearching(false);
-    }
-  };
+      const map = new Map((profs ?? []).map((p) => [p.user_id, p]));
 
-  // Enterで検索
-  const onKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
-    if (e.key === "Enter") doSearch();
-  };
+      const items: FriendItem[] = rows
+        .map((r) => {
+          const otherId = r.user_id === userId ? r.friend_id : r.user_id;
+          const other = map.get(otherId);
+          if (!other) return null;
 
-  // ✅ follow / unfollow
-  const follow = async (targetUserId: string) => {
-    if (!userId) return;
-    setFollowErr(null);
-    try {
-      const { error } = await supabase.from("follows").insert({
-        follower_id: userId,
-        following_id: targetUserId,
+          const direction: FriendItem["direction"] =
+            r.user_id === userId ? "outgoing" : "incoming";
+
+          return {
+            friendshipId: r.id,
+            other,
+            status: r.status,
+            direction,
+          };
+        })
+        .filter(Boolean) as FriendItem[];
+
+      // 表示：accepted → pending(incoming) → pending(outgoing)
+      items.sort((a, b) => {
+        const rank = (x: FriendItem) => {
+          if (x.status === "accepted") return 0;
+          if (x.direction === "incoming") return 1;
+          return 2;
+        };
+        return rank(a) - rank(b) || a.other.username.localeCompare(b.other.username);
       });
-      if (error) throw error;
-      await reloadFollows(userId);
+
+      setFriends(items);
     } catch (e: any) {
-      console.error(e);
-      setFollowErr(e?.message ?? "フォローに失敗しました");
+      setFriendsError(e?.message ?? "フレンド一覧の取得に失敗しました");
+    } finally {
+      setFriendsLoading(false);
     }
-  };
-
-  const unfollow = async (targetUserId: string) => {
-    if (!userId) return;
-    setFollowErr(null);
-    try {
-      const { error } = await supabase
-        .from("follows")
-        .delete()
-        .eq("follower_id", userId)
-        .eq("following_id", targetUserId);
-      if (error) throw error;
-      await reloadFollows(userId);
-    } catch (e: any) {
-      console.error(e);
-      setFollowErr(e?.message ?? "解除に失敗しました");
-    }
-  };
-
-  const friendsList = useMemo(() => {
-    const out: string[] = [];
-    for (const uid of myFollowing) {
-      if (myFollowers.has(uid)) out.push(uid);
-    }
-    return out;
-  }, [myFollowing, myFollowers]);
-
-  // ✅ 表示用：自分のアイコンURL
-  const myAvatarSrc = useMemo(() => avatarToPublicUrl(myAvatar ?? null), [myAvatar]);
-
-  if (loading) {
-    return <div className="container" style={{ padding: 16, opacity: 0.7 }}>読み込み中...</div>;
   }
 
-  if (!userId) {
-    return <div className="container" style={{ padding: 16, opacity: 0.7 }}>ログイン確認中...</div>;
+  useEffect(() => {
+    loadFriends();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // 検索（username 前方/部分一致）
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const keyword = q.trim();
+      if (!userId) return;
+
+      if (!keyword) {
+        setResults([]);
+        setSearchError(null);
+        return;
+      }
+
+      setSearching(true);
+      setSearchError(null);
+
+      // 入力中のチラつき防止に軽くデバウンス
+      await debounceWait(250);
+      if (cancelled) return;
+
+      try {
+        // 自分自身は除外
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("user_id,username,avatar_url")
+          .ilike("username", `%${keyword}%`)
+          .neq("user_id", userId)
+          .order("username", { ascending: true })
+          .limit(20)
+          .returns<Profile[]>();
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        setResults(data ?? []);
+      } catch (e: any) {
+        if (cancelled) return;
+        setSearchError(e?.message ?? "検索に失敗しました");
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [q, userId]);
+
+  const friendIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of friends) set.add(f.other.user_id);
+    return set;
+  }, [friends]);
+
+  // 申請（pending）
+  async function requestFriend(targetUserId: string) {
+    if (!userId) return;
+    if (targetUserId === userId) return;
+
+    // ペア重複を減らすために、UUID文字列をソートして常に同じ向きで入れる運用
+    const [a, b] = [userId, targetUserId].sort();
+    const user_id = a;
+    const friend_id = b;
+
+    setBusyId(targetUserId);
+    try {
+      const { error } = await supabase.from("friendships").insert({
+        user_id,
+        friend_id,
+        status: "pending",
+      });
+      if (error) throw error;
+
+      await loadFriends();
+      setQ(""); // ついでにクリア
+      setResults([]);
+    } catch (e: any) {
+      alert(e?.message ?? "申請に失敗しました");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // 承認（pending → accepted）
+  async function acceptFriend(friendshipId: number) {
+    setBusyId(friendshipId);
+    try {
+      const { error } = await supabase
+        .from("friendships")
+        .update({ status: "accepted", accepted_at: new Date().toISOString() })
+        .eq("id", friendshipId);
+      if (error) throw error;
+
+      await loadFriends();
+    } catch (e: any) {
+      alert(e?.message ?? "承認に失敗しました");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // 削除
+  async function removeFriend(friendshipId: number) {
+    if (!confirm("このフレンドを削除しますか？")) return;
+
+    setBusyId(friendshipId);
+    try {
+      const { error } = await supabase.from("friendships").delete().eq("id", friendshipId);
+      if (error) throw error;
+
+      await loadFriends();
+    } catch (e: any) {
+      alert(e?.message ?? "削除に失敗しました");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
-    <div className="container">
-      <div className="header">
-        <div>
-          <h2 style={{ margin: 0 }}>フレンド</h2>
-          <div className="small">
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  border: "1px solid #e5e7eb",
-                  background: "#f3f4f6",
-                  overflow: "hidden",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#6b7280",
-                }}
-              >
-                {myAvatarSrc ? (
-                  <img
-                    src={myAvatarSrc}
-                    alt="あなたのアイコン"
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <span>{myName?.slice(0, 1) || "?"}</span>
-                )}
-              </span>
-              {myName ? `あなた：${myName}` : "ユーザー名を設定すると探しやすいよ"}
-            </span>
-          </div>
-        </div>
-
-        <div className="header-actions">
-          <Link to="/" className="btn">← ホーム</Link>
-        </div>
-      </div>
+    <div className="container" style={{ maxWidth: 720 }}>
+      <h2 style={{ marginTop: 0 }}>フレンド</h2>
 
       {/* 検索 */}
-      <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-        <div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>ユーザーを探す（ユーザーネーム）</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="相手のユーザー名を入力"
-              style={{
-                flex: 1,
-                padding: 12,
-                borderRadius: 12,
-                border: "1px solid #ddd",
-                outline: "none",
-              }}
-            />
-            <button className="btn" onClick={doSearch} disabled={searching || !q.trim()}>
-              {searching ? "検索中..." : "検索"}
-            </button>
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 14,
+          padding: 12,
+          boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>ユーザー検索</div>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ユーザーネームで検索（例：しながわ）"
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid rgba(0,0,0,0.12)",
+            outline: "none",
+          }}
+        />
+
+        {searchError && (
+          <div style={{ marginTop: 8, color: "#b00020" }}>{searchError}</div>
+        )}
+
+        {(searching || results.length > 0) && (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
+              {searching ? "検索中…" : `結果：${results.length}件`}
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {results.map((p) => {
+                const already = friendIdSet.has(p.user_id);
+                return (
+                  <div
+                    key={p.user_id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 12,
+                      border: "1px solid rgba(0,0,0,0.08)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 999,
+                          background: "rgba(0,0,0,0.06)",
+                          overflow: "hidden",
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        {p.avatar_url ? (
+                          <img
+                            src={p.avatar_url}
+                            alt=""
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : null}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{p.username}</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>
+                          {already ? "すでにフレンド関係があります" : "フレンド申請できます"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {already ? (
+                      <Link className="btn" to={`/u/${p.username}`}>
+                        地図を見る
+                      </Link>
+                    ) : (
+                      <button
+                        className="btn"
+                        onClick={() => requestFriend(p.user_id)}
+                        disabled={busyId === p.user_id}
+                      >
+                        {busyId === p.user_id ? "送信中…" : "フレンド追加"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* 一覧 */}
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 14,
+          padding: 12,
+          boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 700 }}>フレンド一覧</div>
+          <button className="btn" onClick={loadFriends} disabled={friendsLoading}>
+            更新
+          </button>
         </div>
 
-        {searchErr && (
-          <div style={{ background: "#ffecec", border: "1px solid #ffb4b4", color: "#a40000", padding: 10, borderRadius: 12 }}>
-            {searchErr}
+        {friendsError && <div style={{ marginTop: 8, color: "#b00020" }}>{friendsError}</div>}
+
+        {friendsLoading ? (
+          <div style={{ padding: 12, opacity: 0.7 }}>読み込み中…</div>
+        ) : friends.length === 0 ? (
+          <div style={{ padding: 12, opacity: 0.7 }}>
+            まだフレンドがいません。上の検索から追加できます。
           </div>
-        )}
-
-        {followErr && (
-          <div style={{ background: "#ffecec", border: "1px solid #ffb4b4", color: "#a40000", padding: 10, borderRadius: 12 }}>
-            {followErr}
-          </div>
-        )}
-
-        {/* 検索結果 */}
-        {results.length > 0 && (
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>検索結果</div>
-            {results.map((p) => {
-              const isFollowing = myFollowing.has(p.user_id);
-              const isFriend = isFollowing && myFollowers.has(p.user_id);
-
-              const avatarSrc = avatarToPublicUrl(p.avatar_url);
+        ) : (
+          <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+            {friends.map((f) => {
+              const pending = f.status === "pending";
+              const incoming = pending && f.direction === "incoming";
 
               return (
                 <div
-                  key={p.user_id}
+                  key={f.friendshipId}
                   style={{
-                    background: "#fff",
-                    border: "1px solid #eee",
-                    borderRadius: 14,
-                    padding: 14,
                     display: "flex",
-                    justifyContent: "space-between",
                     alignItems: "center",
+                    justifyContent: "space-between",
                     gap: 10,
+                    padding: 10,
+                    borderRadius: 12,
+                    border: "1px solid rgba(0,0,0,0.08)",
                   }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 800, display: "flex", gap: 8, alignItems: "center" }}>
-                      <span
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          border: "1px solid #e5e7eb",
-                          background: "#f3f4f6",
-                          overflow: "hidden",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          color: "#6b7280",
-                        }}
-                      >
-                        {avatarSrc ? (
-                          <img
-                            src={avatarSrc}
-                            alt={`${p.username}のアイコン`}
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          <span>{p.username.slice(0, 1) || "?"}</span>
-                        )}
-                      </span>
-                      <span>{p.username}</span>
-                      {isFriend && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            padding: "4px 8px",
-                            borderRadius: 999,
-                            border: "1px solid #e5e7eb",
-                            background: "#f8fafc",
-                          }}
-                        >
-                          相互
-                        </span>
-                      )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        background: "rgba(0,0,0,0.06)",
+                        overflow: "hidden",
+                        flex: "0 0 auto",
+                      }}
+                    >
+                      {f.other.avatar_url ? (
+                        <img
+                          src={f.other.avatar_url}
+                          alt=""
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : null}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>{f.other.username}</div>
+                      <div style={{ fontSize: 12, opacity: 0.7 }}>
+                        {f.status === "accepted"
+                          ? "フレンド"
+                          : incoming
+                          ? "申請が届いています"
+                          : "申請中"}
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {isFollowing ? (
-                      <button className="btn" onClick={() => unfollow(p.user_id)}>
-                        解除
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {f.status === "accepted" ? (
+                      <Link className="btn" to={`/u/${f.other.username}`}>
+                        地図を見る
+                      </Link>
+                    ) : incoming ? (
+                      <button
+                        className="btn"
+                        onClick={() => acceptFriend(f.friendshipId)}
+                        disabled={busyId === f.friendshipId}
+                      >
+                        {busyId === f.friendshipId ? "承認中…" : "承認"}
                       </button>
                     ) : (
-                      <button className="btn" onClick={() => follow(p.user_id)}>
-                        フォロー
+                      <button className="btn" disabled>
+                        申請中
                       </button>
                     )}
+
+                    <button
+                      className="btn"
+                      onClick={() => removeFriend(f.friendshipId)}
+                      disabled={busyId === f.friendshipId}
+                      style={{ opacity: 0.85 }}
+                    >
+                      削除
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-
-        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
-          相互（友達）数：{loadingFollows ? "…" : friendsList.length}
-        </div>
-
-        <div style={{ fontSize: 12, opacity: 0.65, marginTop: 10 }}>
-          ※ 相手もあなたをフォローすると「相互」になります（友達扱い）
-        </div>
       </div>
     </div>
   );
