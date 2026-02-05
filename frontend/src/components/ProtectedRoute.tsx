@@ -26,13 +26,13 @@ export default function ProtectedRoute({ children }: { children: JSX.Element }) 
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
+          {/* <button
             className="btn"
             type="button"
             onClick={() => retryProfile()}
           >
             再試行
-          </button>
+          </button> */}
 
           <button
             className="btn"
