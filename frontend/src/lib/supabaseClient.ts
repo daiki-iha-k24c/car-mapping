@@ -4,17 +4,16 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase env が未設定です（VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY）");
+  throw new Error("Supabase env が未設定です (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)");
 }
 
+// 🔍 一時デバッグ用（Bucket not found 切り分け）
 console.log("VITE_SUPABASE_URL =", import.meta.env.VITE_SUPABASE_URL);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
   },
-  
 });

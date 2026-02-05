@@ -2,13 +2,12 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 
 export default function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { userId, username, loading, profileStatus, retryProfile } = useUser();
+  const { userId, username, loading, profileStatus } = useUser();
   const loc = useLocation();
 
   if (loading) return <div style={{ padding: 16 }}>Loading... (auth)</div>;
   if (!userId) return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
 
-  // ✅ profiles が取れない（不調/タイムアウト）時は、onboardingに誤爆させずここで止める
   if (profileStatus === "error") {
     return (
       <div style={{ padding: 16, maxWidth: 520, margin: "0 auto" }}>
@@ -26,7 +25,6 @@ export default function ProtectedRoute({ children }: { children: JSX.Element }) 
     );
   }
 
-  // ✅ 取得できた上で username が無いなら本当に未設定 → onboardingへ
   if (profileStatus === "ready" && !username && loc.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }

@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
 
 const AVATAR_BUCKET = "avatars";
-const AVATAR_MAX_BYTES = 1024 * 1024;
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
 type Profile = { username: string; avatar_url: string | null };
 

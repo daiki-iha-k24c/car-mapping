@@ -47,6 +47,7 @@ export default function HomePage() {
   const { userId, loading } = useUser();
   const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
   const { username } = useUser();
+  const AVATAR_BUCKET = "avatars";
 
   {
     !loading && !username && (
@@ -221,6 +222,18 @@ export default function HomePage() {
     // plates は次のフェーズ（今はローカルのままでOK）
   };
 
+  function avatarToPublicUrl(v: string | null) {
+    if (!v) return null;
+    if (/^https?:\/\//i.test(v) || /^data:image\//i.test(v)) return v; // 互換
+    const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(v);
+    return data.publicUrl ?? null;
+  }
+
+  const meAvatarSrc = useMemo(
+    () => avatarToPublicUrl(me?.avatar_url ?? null),
+    [me?.avatar_url]
+  );
+
   return (
     <div className="container">
       <div className="header">
@@ -241,7 +254,7 @@ export default function HomePage() {
                 alignItems: "center",
                 gap: 8,
                 marginRight: 8,
-                background: "ffffff",
+                background: "#ffffff",
                 padding: "8px",
                 cursor: "pointer",
                 border: "1px solid black",
@@ -250,7 +263,7 @@ export default function HomePage() {
             >
 
               <img
-                src={me.avatar_url || "/avatar-default.png"}
+                src={meAvatarSrc || "/avatar-default.png"}
                 alt="avatar"
                 width={30}
                 height={30}
@@ -260,10 +273,11 @@ export default function HomePage() {
                   border: "1px solid rgba(0,0,0,0.15)",
                 }}
                 onError={(e) => {
-                  // URL切れでも落ちない
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                  // 非表示じゃなくてデフォルトに戻す方が体験良い
+                  (e.currentTarget as HTMLImageElement).src = "/avatar-default.png";
                 }}
               />
+
               <span style={{ fontSize: 13, fontWeight: 600 }}>
                 {me.username}
               </span>
