@@ -1,13 +1,13 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/UserContext";
+import LoadingPlate from "../components/LoadingPlate";
 
 export default function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { userId, authChecking, profileStatus } = useUser();
+  const { userId, authChecking, profileStatus,loading } = useUser();
   const loc = useLocation();
 
-  if (authChecking) {
-    return <div style={{ padding: 16, opacity: 0.7 }}>Loading... (session)</div>;
-  }
+if (authChecking) return <LoadingPlate />;
+if (loading) return <LoadingPlate/>;
 
   if (!userId) {
     return <Navigate to="/login" replace state={{ from: loc.pathname }} />;

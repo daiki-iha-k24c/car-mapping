@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate,BrowserRouter } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import RegionListPage from "./pages/RegionListPage";
 import RegionPage from "./pages/RegionPage";
@@ -15,10 +15,24 @@ import SignupPage from "./pages/SignupPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SerialCollectionPage from "./pages/SerialCollectionPage";
 import AppFooter from "./components/AppFooter";
+import WelcomeSplash from "./components/WelcomeSplash";
+import { useUser } from "./context/UserContext";
 
 export default function App() {
   return (
     <UserProvider>
+        <AppInner />
+    </UserProvider>
+  );
+}
+
+function AppInner() {
+  const { authChecking } = useUser();
+
+  return (
+    <>
+      <WelcomeSplash done={!authChecking} />
+      {/* ここに Routes / Layout / ProtectedRoute 等 */}
       <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1 }}>
           <Routes>
@@ -78,6 +92,6 @@ export default function App() {
         {/* ✅ 全ページ共通フッター */}
         <AppFooter />
       </div>
-    </UserProvider>
+    </>
   );
 }
