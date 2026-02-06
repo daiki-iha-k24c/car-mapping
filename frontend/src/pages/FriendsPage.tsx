@@ -245,32 +245,28 @@ export default function FriendPage() {
 
   // 申請（pending）
   async function requestFriend(targetUserId: string) {
-    if (!userId) return;
-    if (targetUserId === userId) return;
+  if (!userId) return;
+  if (targetUserId === userId) return;
 
-    // UUID文字列ソートで向きを固定（ペア重複を減らす）
-    const [a, b] = [userId, targetUserId].sort();
-    const user_id = a;
-    const friend_id = b;
+  setBusyId(targetUserId);
+  try {
+    const { error } = await supabase.from("friendships").insert({
+      user_id: userId,           // ✅ 申請者は必ず自分
+      friend_id: targetUserId,   // ✅ 相手
+      status: "pending",
+    });
+    if (error) throw error;
 
-    setBusyId(targetUserId);
-    try {
-      const { error } = await supabase.from("friendships").insert({
-        user_id,
-        friend_id,
-        status: "pending",
-      });
-      if (error) throw error;
-
-      await loadFriends();
-      setQ("");
-      setResults([]);
-    } catch (e: any) {
-      alert(e?.message ?? "申請に失敗しました");
-    } finally {
-      setBusyId(null);
-    }
+    await loadFriends();
+    setQ("");
+    setResults([]);
+  } catch (e: any) {
+    alert(e?.message ?? "申請に失敗しました");
+  } finally {
+    setBusyId(null);
   }
+}
+
 
   // 承認（pending → accepted）
   async function acceptFriend(friendshipId: number) {
