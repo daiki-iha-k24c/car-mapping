@@ -12,14 +12,12 @@ export default function WelcomeSplash({ totalMs = 4200 }: { totalMs?: number }) 
     const ballRef = useRef<HTMLSpanElement | null>(null);
 
     const t = useMemo(() => {
-        const type = 1100;      // 半分にした値
-        const hold = 250;       // ★追加：ここで余白
-        const swap = 150;
+        const type = 1100;
+        const swap = 150;     // 詰まり対策で少し長め推奨
         const ballize = 175;
-        const drop = 550;
         const puff = 1000;
-        const out = Math.max(400, totalMs - type - hold - swap - ballize - drop - puff);
-        return { type, hold, swap, ballize, drop, puff, out };
+        const out = Math.max(400, totalMs - type - swap - ballize - puff);
+        return { type, swap, ballize, puff, out };
     }, [totalMs]);
 
     const placeAtA = () => {
@@ -66,23 +64,27 @@ export default function WelcomeSplash({ totalMs = 4200 }: { totalMs?: number }) 
     }, []);
 
     useEffect(() => {
-        const s1 = setTimeout(() => setPhase("swap"), t.type + t.hold);
-        const s2 = setTimeout(() => setPhase("ballize"), t.type + t.hold + t.swap);
-        const s3 = setTimeout(() => setPhase("drop"), t.type + t.hold + t.swap + t.ballize);
-        const s4 = setTimeout(() => {
-            setFloodOriginAtBall();
+        const s1 = window.setTimeout(() => setPhase("swap"), t.type);
+        const s2 = window.setTimeout(() => setPhase("ballize"), t.type + t.swap);
+
+        // ✅ drop を挟まずに puff へ
+        const s3 = window.setTimeout(() => {
+            setFloodOriginAtBall(); // puff直前に起点セットはそのまま
             setPhase("puff");
-        }, t.type + t.hold + t.swap + t.ballize + t.drop);
-        const s5 = setTimeout(() => setPhase("out"), t.type + t.hold + t.swap + t.ballize + t.drop + t.puff);
+        }, t.type + t.swap + t.ballize);
+
+        const s4 = window.setTimeout(
+            () => setPhase("out"),
+            t.type + t.swap + t.ballize + t.puff
+        );
 
         return () => {
             window.clearTimeout(s1);
             window.clearTimeout(s2);
             window.clearTimeout(s3);
             window.clearTimeout(s4);
-            window.clearTimeout(s5);
         };
-    }, [t.type, t.swap, t.ballize, t.drop, t.puff]);
+    }, [t.type, t.swap, t.ballize, t.puff]);
 
     useEffect(() => {
         // swap/ballize で位置を確実に合わせる
