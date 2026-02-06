@@ -40,22 +40,32 @@ function publicUrlFromAvatarValue(avatarUrlOrPath: string | null) {
   return data.publicUrl ?? null;
 }
 
-async function uploadAvatarToStorage(userId: string, file: File) {
-  const ext = guessExtFromMime(file.type);
-  const path = `${userId}/avatar.${ext}`;
+async function uploadAvatarAndSaveProfile(userId: string, file: File) {
+  // 1) 拡張子をpng固定でOK（画像加工してるならなおさら）
+  const path = `${userId}.png`;
 
+  // 2) upload（同名上書き）
   const { error: upErr } = await supabase.storage
-    .from(AVATAR_BUCKET)
+    .from("avatars")
     .upload(path, file, {
       upsert: true,
-      contentType: file.type,
-      cacheControl: "3600",
+      contentType: file.type || "image/png",
+      cacheControl: "60", // ← 後で説明（キャッシュ対策）
     });
 
   if (upErr) throw upErr;
 
-  return path; // DBにはpathを保存
+  // 3) profiles更新：avatar_url に「パス」を入れる
+  const { error: pErr } = await supabase
+    .from("profiles")
+    .update({ avatar_url: path })
+    .eq("user_id", userId);
+
+  if (pErr) throw pErr;
+
+  return path;
 }
+
 
 export default function MePage() {
   const [loading, setLoading] = useState(true);
@@ -197,7 +207,7 @@ export default function MePage() {
 
       // file が選ばれていれば upload して path を採用
       if (avatarFile) {
-        nextAvatarValue = await uploadAvatarToStorage(user.id, avatarFile);
+        nextAvatarValue = await uploadAvatarAndSaveProfile(user.id, avatarFile);
       }
 
       // 2) upsert

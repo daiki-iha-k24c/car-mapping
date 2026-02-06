@@ -74,26 +74,19 @@ function resolveAvatarUrl(avatarUrl: string | null) {
   return data.publicUrl ?? null;
 }
 
-function Avatar({
-  username,
-  avatarUrl,
-  size = 34,
-}: {
-  username: string;
-  avatarUrl: string | null;
-  size?: number;
-}) {
+function Avatar({ username, avatarUrl, size = 34 }: { username: string; avatarUrl: string | null; size?: number }) {
   const [broken, setBroken] = useState(false);
 
   const src = useMemo(() => {
     if (!avatarUrl) return null;
-    if (/^https?:\/\//i.test(avatarUrl)) return avatarUrl;
 
-    // avatar_url が user_id だけの暫定を許容（userId.png 想定）
-    const path = avatarUrl.endsWith(".png") ? avatarUrl : `${avatarUrl}.png`;
+    // すでにURLならそのまま（ただしキャッシュ破り付与）
+    if (/^https?:\/\//i.test(avatarUrl)) return `${avatarUrl}?v=${Date.now()}`;
 
-    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    return data.publicUrl ?? null;
+    // パスとして扱う（例: "xxxxx.png"）
+    const { data } = supabase.storage.from("avatars").getPublicUrl(avatarUrl);
+    const url = data.publicUrl ?? null;
+    return url ? `${url}?v=${Date.now()}` : null;
   }, [avatarUrl]);
 
   const initial = (username?.trim()?.[0] ?? "?").toUpperCase();
@@ -116,7 +109,7 @@ function Avatar({
           src={src}
           alt=""
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-          onError={() => setBroken(true)} // ✅ 壊れたらimgを消して頭文字だけ
+          onError={() => setBroken(true)}
         />
       ) : (
         <div style={{ fontWeight: 800, opacity: 0.7, lineHeight: 1 }}>{initial}</div>
@@ -124,6 +117,7 @@ function Avatar({
     </div>
   );
 }
+
 
 
 
