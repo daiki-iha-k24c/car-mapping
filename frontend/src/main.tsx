@@ -31,8 +31,6 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
   }
 }
 
-// ✅ PWA：更新は手動（勝手にリロードしない）
-// ✅ 更新があるかどうかだけ保持
 export let __needRefresh = false;
 export let __doUpdate: null | (() => void) = null;
 
@@ -41,14 +39,12 @@ const updateSW = registerSW({
   onNeedRefresh() {
     console.log("新しいバージョンがあります（更新は手動）");
     __needRefresh = true;
-    __doUpdate = () => updateSW(true); // ← 押した時だけ更新
-    // ここでは絶対に updateSW(true) を呼ばない
+    __doUpdate = () => updateSW(true);
   },
   onOfflineReady() {
     console.log("オフライン準備OK");
   },
 });
-
 
 let reloaded = false;
 
@@ -64,8 +60,6 @@ async function hardReload() {
   } catch {}
 
   try {
-    // キャッシュ掃除（可能な環境のみ）
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cachesAny = caches as any;
     if (cachesAny?.keys) {
       const keys = await cachesAny.keys();
@@ -73,7 +67,6 @@ async function hardReload() {
     }
   } catch {}
 
-  // 新しい index.html を確実に取りに行く
   window.location.replace(window.location.pathname + "?reload=" + Date.now());
 }
 
@@ -103,7 +96,8 @@ const g = globalThis as any;
 const root = g.__APP_ROOT__ ?? ReactDOM.createRoot(container);
 g.__APP_ROOT__ = root;
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+// ✅ ここで “root.render” する（createRootしない）
+root.render(
   <BrowserRouter>
     <ErrorBoundary>
       <App />

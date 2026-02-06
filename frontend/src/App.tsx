@@ -53,7 +53,7 @@ function AppInner() {
             <Route path="/region/:regionId" element={<RegionPage />} />
             <Route path="/region/:regionId/plates" element={<RegionPlatesPage />} />
 
-            <Route path="/Onboarding" element={<OnboardingPage />} />
+            <Route path="/onboarding" element={<OnboardingPage />} />
 
             <Route
               path="/me"

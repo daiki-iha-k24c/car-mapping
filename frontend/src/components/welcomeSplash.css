@@ -83,7 +83,7 @@
   border-radius: 999px;
   background: #039be5;
   box-shadow: 0 14px 34px rgba(0,0,0,0.16);
-  transform: translate(-50%, -50%) scale(0.2);
+  transform: translate(-50%, -50%) ;
   opacity: 0;
   pointer-events: none;
 }
@@ -107,25 +107,29 @@
   opacity: 1;
 }
 
-/* ===== Practical puff（起点は ball の位置にJSで置く） ===== */
-.ws-splash {
+/* 広がり用：全画面をclip-pathで円拡大 */
+.ws-flood{
   position: fixed;
-  width: 0;
-  height: 0;
-  padding: 0;
-  border: 130em solid #039be5;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  background: #039be5;
   opacity: 0;
-  box-sizing: initial;
   pointer-events: none;
+
+  /* 起点（JSでセット） */
+  --fx: 50vw;
+  --fy: 50vh;
+
+  clip-path: circle(0px at var(--fx) var(--fy));
 }
 
-.ws-root.ws-puff .ws-splash {
+/* puffフェーズで1秒かけて確実に全画面塗る */
+.ws-root.ws-puff .ws-flood,
+.ws-root.ws-out .ws-flood{
   opacity: 1;
-  animation:
-    puff 0.6s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards,
-    borderRadius 0.25s 0.6s linear forwards;
+  clip-path: circle(160vmax at var(--fx) var(--fy));
+  transition:
+    clip-path 1000ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
+    opacity 140ms ease;
 }
 
 /* puff中は文字を白っぽく（見せたくなければ opacity:0 でもOK） */
@@ -139,6 +143,11 @@
 .ws-root.ws-out {
   animation: fadeOut 420ms ease forwards;
 }
+.ws-flood{
+  will-change: clip-path;
+  transform: translateZ(0);
+}
+
 
 /* ===== keyframes ===== */
 @keyframes typing {
@@ -157,19 +166,6 @@
   }
 }
 
-@keyframes puff {
-  0% {
-    height: 0px;
-    padding: 0px;
-  }
-  100% {
-    height: 100%;
-    padding: 0px 100%;
-  }
-}
-@keyframes borderRadius {
-  to { border-radius: 0px; }
-}
 
 @keyframes fadeOut {
   to { opacity: 0; }

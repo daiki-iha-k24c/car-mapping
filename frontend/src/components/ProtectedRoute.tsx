@@ -3,22 +3,22 @@ import { useUser } from "../context/UserContext";
 import LoadingPlate from "../components/LoadingPlate";
 
 export default function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { userId, authChecking, profileStatus,loading } = useUser();
+  const { userId, authChecking, profileStatus } = useUser();
   const loc = useLocation();
 
-if (authChecking) return <LoadingPlate />;
-if (loading) return <LoadingPlate/>;
+  // ✅ ガードは authChecking だけにする（ここ重要）
+  if (authChecking) return <LoadingPlate />;
 
   if (!userId) {
     return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
   }
 
+  // ✅ App側のパスに合わせて小文字に統一する
   if (profileStatus === "missing" && loc.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }
 
   if (profileStatus === "error") {
-    // ここはあなたの既存UIでOK（ログアウト扱いしない）
     return (
       <div style={{ padding: 16, maxWidth: 520, margin: "0 auto" }}>
         <h3 style={{ marginTop: 0 }}>接続が不安定です</h3>
