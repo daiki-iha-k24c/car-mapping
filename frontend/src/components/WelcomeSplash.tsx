@@ -1,26 +1,28 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import "./welcomeSplash.css";
 
-type Phase = "type" | "swap" | "ballize" | "drop" | "flood" | "out";
+type Phase = "type" | "swap" | "ballize" | "drop" | "puff" | "out";
 
-export default function WelcomeSplash({ totalMs = 6200 }: { totalMs?: number }) {
+export default function WelcomeSplash({ totalMs = 4200 }: { totalMs?: number }) {
     const [phase, setPhase] = useState<Phase>("type");
 
     const rootRef = useRef<HTMLDivElement | null>(null);
     const aRef = useRef<HTMLSpanElement | null>(null);
+    const splashRef = useRef<HTMLSpanElement | null>(null);
     const ballRef = useRef<HTMLSpanElement | null>(null);
 
     const t = useMemo(() => {
-        const type = 2200;
-        const swap = 220;
-        const ballize = 350;
-        const drop = 1400;  // 少しゆっくり落とす
-        const flood = 1000; // 1秒で広がる（指定）
-        const out = Math.max(400, totalMs - type - swap - ballize - drop - flood);
-        return { type, swap, ballize, drop, flood, out };
+        const type = 1100;      // 半分にした値
+        const hold = 250;       // ★追加：ここで余白
+        const swap = 150;
+        const ballize = 175;
+        const drop = 550;
+        const puff = 1000;
+        const out = Math.max(400, totalMs - type - hold - swap - ballize - drop - puff);
+        return { type, hold, swap, ballize, drop, puff, out };
     }, [totalMs]);
 
-    const placeBallAtA = () => {
+    const placeAtA = () => {
         const root = rootRef.current;
         const a = aRef.current;
         const ball = ballRef.current;
@@ -32,11 +34,11 @@ export default function WelcomeSplash({ totalMs = 6200 }: { totalMs?: number }) 
         const cx = ar.left + ar.width / 2 - rr.left;
         const cy = ar.top + ar.height / 2 - rr.top;
 
+        // ball を a の中心に配置（transformで中心合わせ）
         ball.style.left = `${cx}px`;
         ball.style.top = `${cy}px`;
     };
 
-    // floodの起点を「ボールの中心」に設定（着地点）
     const setFloodOriginAtBall = () => {
         const root = rootRef.current;
         const ball = ballRef.current;
@@ -52,10 +54,11 @@ export default function WelcomeSplash({ totalMs = 6200 }: { totalMs?: number }) 
         root.style.setProperty("--fy", `${cy}px`);
     };
 
+
     useLayoutEffect(() => {
-        placeBallAtA();
+        placeAtA();
         const onResize = () => {
-            placeBallAtA();
+            placeAtA();
             setFloodOriginAtBall();
         };
         window.addEventListener("resize", onResize);
@@ -63,20 +66,14 @@ export default function WelcomeSplash({ totalMs = 6200 }: { totalMs?: number }) 
     }, []);
 
     useEffect(() => {
-        const s1 = window.setTimeout(() => setPhase("swap"), t.type);
-        const s2 = window.setTimeout(() => setPhase("ballize"), t.type + t.swap);
-        const s3 = window.setTimeout(() => setPhase("drop"), t.type + t.swap + t.ballize);
-
-        const s4 = window.setTimeout(() => {
-            // ✅ 落下が終わるタイミングで起点を取得して flood 開始
+        const s1 = setTimeout(() => setPhase("swap"), t.type + t.hold);
+        const s2 = setTimeout(() => setPhase("ballize"), t.type + t.hold + t.swap);
+        const s3 = setTimeout(() => setPhase("drop"), t.type + t.hold + t.swap + t.ballize);
+        const s4 = setTimeout(() => {
             setFloodOriginAtBall();
-            requestAnimationFrame(() => setPhase("flood"));
-        }, t.type + t.swap + t.ballize + t.drop);
-
-        const s5 = window.setTimeout(
-            () => setPhase("out"),
-            t.type + t.swap + t.ballize + t.drop + t.flood
-        );
+            setPhase("puff");
+        }, t.type + t.hold + t.swap + t.ballize + t.drop);
+        const s5 = setTimeout(() => setPhase("out"), t.type + t.hold + t.swap + t.ballize + t.drop + t.puff);
 
         return () => {
             window.clearTimeout(s1);
@@ -85,18 +82,20 @@ export default function WelcomeSplash({ totalMs = 6200 }: { totalMs?: number }) 
             window.clearTimeout(s4);
             window.clearTimeout(s5);
         };
-    }, [t.type, t.swap, t.ballize, t.drop, t.flood]);
+    }, [t.type, t.swap, t.ballize, t.drop, t.puff]);
 
     useEffect(() => {
-        if (phase === "swap" || phase === "ballize") placeBallAtA();
+        // swap/ballize で位置を確実に合わせる
+        if (phase === "swap" || phase === "ballize") placeAtA();
     }, [phase]);
 
     return (
         <div ref={rootRef} className={`ws-root ws-${phase}`} aria-label="起動中">
-            {/* 着地点から広がる青 */}
+            {/* Practical puff（起点は ball の位置） */}
+            {/* 全画面の広がり（clip-path） */}
             <div className="ws-flood" aria-hidden="true" />
 
-            {/* a→ボール */}
+            {/* a→ball 変換用のボール（fixedで絶対位置） */}
             <span ref={ballRef} className="ws-ball" aria-hidden="true" />
 
             {/* type中だけ */}
@@ -109,7 +108,9 @@ export default function WelcomeSplash({ totalMs = 6200 }: { totalMs?: number }) 
             <div className="ws-line ws-finalLine" aria-hidden={phase === "type"}>
                 <span className="ws-finalText">
                     car-m
-                    <span ref={aRef} className="ws-a">a</span>
+                    <span ref={aRef} className="ws-a">
+                        a
+                    </span>
                     pping
                 </span>
             </div>

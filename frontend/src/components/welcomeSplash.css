@@ -7,13 +7,9 @@
   overflow: hidden;
   z-index: 10000;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", "Hiragino Sans", "Helvetica Neue", Arial;
-
-  /* flood起点（JSで更新） */
-  --fx: 50vw;
-  --fy: 50vh;
 }
 
-/* ===== テキスト ===== */
+/* テキスト */
 .ws-line {
   position: absolute;
   top: 45vh;
@@ -24,13 +20,16 @@
   white-space: nowrap;
 }
 
-.ws-typeLine { color: rgba(0,0,0,0.88); }
+.ws-typeLine { 
+    color: rgba(0,0,0,0.88);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
 .ws-typeText {
   display: inline-block;
   overflow: hidden;
   white-space: nowrap;
   width: 0ch;
-  animation: typing 2200ms steps(11, end) forwards;
+  animation: typing 1100ms steps(11, end) forwards;
 }
 .ws-caret {
   display: inline-block;
@@ -42,17 +41,15 @@
   animation: caretBlink 700ms step-end infinite;
 }
 
-/* type行を消す */
 .ws-root.ws-swap .ws-typeLine,
 .ws-root.ws-ballize .ws-typeLine,
 .ws-root.ws-drop .ws-typeLine,
-.ws-root.ws-flood .ws-typeLine,
+.ws-root.ws-puff .ws-typeLine,
 .ws-root.ws-out .ws-typeLine {
   opacity: 0;
   transition: opacity 180ms ease;
 }
 
-/* 完成形 */
 .ws-finalLine {
   opacity: 0;
   color: rgba(0,0,0,0.90);
@@ -60,51 +57,61 @@
 .ws-root.ws-swap .ws-finalLine,
 .ws-root.ws-ballize .ws-finalLine,
 .ws-root.ws-drop .ws-finalLine,
-.ws-root.ws-flood .ws-finalLine,
+.ws-root.ws-puff .ws-finalLine,
 .ws-root.ws-out .ws-finalLine {
   opacity: 1;
   transition: opacity 220ms ease;
 }
 
-.ws-a { display: inline-block; }
+/* a */
+.ws-a {
+  display: inline-block;
+  position: relative;
+}
 
-/* ballize以降は a文字を消す */
+/* ballize以降は a文字を消す（ボールに置き換える） */
 .ws-root.ws-ballize .ws-a,
 .ws-root.ws-drop .ws-a,
-.ws-root.ws-flood .ws-a,
+.ws-root.ws-puff .ws-a,
 .ws-root.ws-out .ws-a {
   opacity: 0;
   transition: opacity 120ms ease;
 }
 
-/* ===== 青ボール ===== */
+/* ===== a → 青ボール ===== */
 .ws-ball {
   position: fixed;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
   background: #039be5;
   box-shadow: 0 14px 34px rgba(0,0,0,0.16);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) ;
   opacity: 0;
   pointer-events: none;
 }
 
-/* a→ボール化（フェードイン） */
-.ws-root.ws-ballize .ws-ball,
-.ws-root.ws-drop .ws-ball,
-.ws-root.ws-flood .ws-ball,
+/* ボール化：じわっと出る */
+.ws-root.ws-ballize .ws-ball {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  transition: transform 350ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 120ms ease;
+}
+
+/* 落下：画面最下部まで（80vh→100vh） */
+.ws-root.ws-drop .ws-ball {
+  opacity: 1;
+  animation: ballDrop 550ms cubic-bezier(0.22, 0.61, 0.2, 1) forwards;
+}
+
+/* puff中はその位置のまま */
+.ws-root.ws-puff .ws-ball,
 .ws-root.ws-out .ws-ball {
   opacity: 1;
-  transition: opacity 180ms ease;
 }
 
-/* ✅ 落下して最下部で止まる（戻らない） */
-.ws-root.ws-drop .ws-ball {
-  animation: ballDrop 1400ms cubic-bezier(0.22, 0.61, 0.2, 1) forwards;
-}
-
-/* ===== 着地点から広がる青（安定：keyframes） ===== */
+/* ===== Practical puff（起点は ball の位置にJSで置く） ===== */
+/* 広がり用：全画面をclip-pathで円拡大 */
 .ws-flood{
   position: fixed;
   inset: 0;
@@ -112,44 +119,27 @@
   opacity: 0;
   pointer-events: none;
 
-  /* 起点（JSで更新） */
+  /* 起点（JSでセット） */
+  --fx: 50vw;
+  --fy: 50vh;
+
   clip-path: circle(0px at var(--fx) var(--fy));
-  -webkit-clip-path: circle(0px at var(--fx) var(--fy));
-
-  will-change: clip-path;
-  transform: translateZ(0);
 }
 
-/* ✅ floodフェーズで必ずアニメ */
-.ws-root.ws-flood .ws-flood{
-  opacity: 1;
-  animation: floodExpand 1000ms cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
-}
-
-/* outでも塗りは維持 */
+/* puffフェーズで1秒かけて確実に全画面塗る */
+.ws-root.ws-puff .ws-flood,
 .ws-root.ws-out .ws-flood{
   opacity: 1;
-  clip-path: circle(180vmax at var(--fx) var(--fy));
-  -webkit-clip-path: circle(180vmax at var(--fx) var(--fy));
+  clip-path: circle(160vmax at var(--fx) var(--fy));
+  transition:
+    clip-path 1000ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
+    opacity 140ms ease;
 }
-
-@keyframes floodExpand{
-  from{
-    clip-path: circle(0px at var(--fx) var(--fy));
-    -webkit-clip-path: circle(0px at var(--fx) var(--fy));
-  }
-  to{
-    clip-path: circle(180vmax at var(--fx) var(--fy));
-    -webkit-clip-path: circle(180vmax at var(--fx) var(--fy));
-  }
-}
-
-
-/* flood中は文字を白にして馴染ませる */
-.ws-root.ws-flood .ws-finalLine,
-.ws-root.ws-out .ws-finalLine{
+/* puff中は文字を白っぽく（見せたくなければ opacity:0 でもOK） */
+.ws-root.ws-puff .ws-finalLine,
+.ws-root.ws-out .ws-finalLine {
   color: rgba(255,255,255,0.92);
-  transition: color 180ms ease;
+  transition: color 200ms ease;
 }
 
 /* out */
@@ -158,24 +148,36 @@
 }
 
 /* ===== keyframes ===== */
-@keyframes typing { from{ width:0ch; } to{ width:11ch; } }
-@keyframes caretBlink { 0%,100%{opacity:0;} 50%{opacity:1;} }
-
-/* 最下部まで */
-@keyframes ballDrop {
-  to { top: calc(100vh - 22px); }
+@keyframes typing {
+  from { width: 0ch; }
+  to   { width: 11ch; }
+}
+@keyframes caretBlink {
+  0%,100% { opacity: 0; }
+  50% { opacity: 1; }
 }
 
-@keyframes fadeOut { to{ opacity:0; } }
+/* ✅ 最下部まで落とす：topの現在値→calc(100vh - 安全マージン) */
+@keyframes ballDrop {
+  to {
+    top: calc(100vh - 22px); /* 画面最下部ギリギリ（ボール半径ぶん余白） */
+  }
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .ws-typeText { animation: none; width: 11ch; }
   .ws-caret { opacity: 0; animation: none; }
   .ws-root.ws-drop .ws-ball { animation: none; top: calc(100vh - 22px); }
-  .ws-root.ws-flood .ws-flood {
-    opacity: 1;
-    clip-path: circle(160vmax at var(--fx) var(--fy));
-    transition: none;
-  }
+  .ws-root.ws-puff .ws-splash { animation: none; opacity: 1; }
   .ws-root.ws-out { animation: none; opacity: 0; }
+}
+
+
+.ws-flood{
+  will-change: clip-path;
+  transform: translateZ(0);
 }

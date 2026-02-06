@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
 import WelcomeSplash from "./WelcomeSplash";
 
-
-/**
- * minimumMs: 最低でもこの時間はスプラッシュを表示する
- * ready: アプリ側の準備完了フラグ（例: authCheckingが終わった等）
- */
 export default function BootGate({
-  minimumMs = 5200,
+  minimumMs = 4200,
   ready,
   children,
 }: {
@@ -22,9 +17,6 @@ export default function BootGate({
     return () => window.clearTimeout(t);
   }, [minimumMs]);
 
-  const showSplash = !(minDone && ready);
-
-if (!(minDone && ready)) return <WelcomeSplash totalMs={minimumMs} />;
-return <>{children}</>;
-
+  if (!(minDone && ready)) return <WelcomeSplash totalMs={minimumMs} />;
+  return <>{children}</>;
 }
