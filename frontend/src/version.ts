@@ -1,2 +1,2 @@
 // src/version.ts
-export const APP_VERSION = "v2.1"; // ←ここを自分で変える
+export const APP_VERSION = "v2.1.1"; // ←ここを自分で変える
