@@ -96,6 +96,12 @@ window.addEventListener("unhandledrejection", (e) => {
   if (isChunkErrorMessage(msg)) hardReload();
 });
 
+const container = document.getElementById("root")!;
+const g = globalThis as any;
+
+// ✅ すでにrootがあればそれを使う（createRoot二重を防ぐ）
+const root = g.__APP_ROOT__ ?? ReactDOM.createRoot(container);
+g.__APP_ROOT__ = root;
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <BrowserRouter>

@@ -17,6 +17,7 @@ import SerialCollectionPage from "./pages/SerialCollectionPage";
 import AppFooter from "./components/AppFooter";
 import WelcomeSplash from "./components/WelcomeSplash";
 import { useUser } from "./context/UserContext";
+import BootGate from "./components/BootGate";
 
 export default function App() {
   return (
@@ -30,8 +31,8 @@ function AppInner() {
   const { authChecking } = useUser();
 
   return (
-    <>
-      <WelcomeSplash done={!authChecking} />
+    
+      <BootGate minimumMs={2500} ready={!authChecking}>
       {/* ここに Routes / Layout / ProtectedRoute 等 */}
       <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1 }}>
@@ -92,6 +93,6 @@ function AppInner() {
         {/* ✅ 全ページ共通フッター */}
         <AppFooter />
       </div>
-    </>
+    </BootGate>
   );
 }
