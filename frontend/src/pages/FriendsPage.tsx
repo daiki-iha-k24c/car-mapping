@@ -55,6 +55,78 @@ function StatRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function resolveAvatarUrl(avatarUrl: string | null) {
+  if (!avatarUrl) return null;
+
+  // すでにURLならそのまま
+  if (/^https?:\/\//i.test(avatarUrl)) return avatarUrl;
+
+  // avatar_url が user_id だけ入ってる暫定ケース
+  // → user_id.png として扱う
+  const path = avatarUrl.endsWith(".png")
+    ? avatarUrl
+    : `${avatarUrl}.png`;
+
+  const { data } = supabase.storage
+    .from("avatars") // ← バケット名
+    .getPublicUrl(path);
+
+  return data.publicUrl ?? null;
+}
+
+function Avatar({
+  username,
+  avatarUrl,
+  size = 34,
+}: {
+  username: string;
+  avatarUrl: string | null;
+  size?: number;
+}) {
+  const [broken, setBroken] = useState(false);
+
+  const src = useMemo(() => {
+    if (!avatarUrl) return null;
+    if (/^https?:\/\//i.test(avatarUrl)) return avatarUrl;
+
+    // avatar_url が user_id だけの暫定を許容（userId.png 想定）
+    const path = avatarUrl.endsWith(".png") ? avatarUrl : `${avatarUrl}.png`;
+
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    return data.publicUrl ?? null;
+  }, [avatarUrl]);
+
+  const initial = (username?.trim()?.[0] ?? "?").toUpperCase();
+
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: "rgba(0,0,0,0.06)",
+        overflow: "hidden",
+        flex: "0 0 auto",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {!broken && src ? (
+        <img
+          src={src}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={() => setBroken(true)} // ✅ 壊れたらimgを消して頭文字だけ
+        />
+      ) : (
+        <div style={{ fontWeight: 800, opacity: 0.7, lineHeight: 1 }}>{initial}</div>
+      )}
+    </div>
+  );
+}
+
+
+
 export default function FriendPage() {
   const { userId } = useUser();
 
@@ -245,27 +317,27 @@ export default function FriendPage() {
 
   // 申請（pending）
   async function requestFriend(targetUserId: string) {
-  if (!userId) return;
-  if (targetUserId === userId) return;
+    if (!userId) return;
+    if (targetUserId === userId) return;
 
-  setBusyId(targetUserId);
-  try {
-    const { error } = await supabase.from("friendships").insert({
-      user_id: userId,           // ✅ 申請者は必ず自分
-      friend_id: targetUserId,   // ✅ 相手
-      status: "pending",
-    });
-    if (error) throw error;
+    setBusyId(targetUserId);
+    try {
+      const { error } = await supabase.from("friendships").insert({
+        user_id: userId,           // ✅ 申請者は必ず自分
+        friend_id: targetUserId,   // ✅ 相手
+        status: "pending",
+      });
+      if (error) throw error;
 
-    await loadFriends();
-    setQ("");
-    setResults([]);
-  } catch (e: any) {
-    alert(e?.message ?? "申請に失敗しました");
-  } finally {
-    setBusyId(null);
+      await loadFriends();
+      setQ("");
+      setResults([]);
+    } catch (e: any) {
+      alert(e?.message ?? "申請に失敗しました");
+    } finally {
+      setBusyId(null);
+    }
   }
-}
 
 
   // 承認（pending → accepted）
@@ -351,6 +423,7 @@ export default function FriendPage() {
             <div style={{ display: "grid", gap: 8 }}>
               {results.map((p) => {
                 const already = friendIdSet.has(p.user_id);
+                const src = resolveAvatarUrl(p.avatar_url);
                 return (
                   <div
                     key={p.user_id}
@@ -365,24 +438,8 @@ export default function FriendPage() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 999,
-                          background: "rgba(0,0,0,0.06)",
-                          overflow: "hidden",
-                          flex: "0 0 auto",
-                        }}
-                      >
-                        {p.avatar_url ? (
-                          <img
-                            src={p.avatar_url}
-                            alt=""
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        ) : null}
-                      </div>
+                      <Avatar username={p.username} avatarUrl={p.avatar_url} />
+
                       <div>
                         <div style={{ fontWeight: 700 }}>{p.username}</div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>
@@ -390,6 +447,7 @@ export default function FriendPage() {
                         </div>
                       </div>
                     </div>
+
 
                     {already ? (
                       <button className="btn" disabled>
@@ -441,7 +499,7 @@ export default function FriendPage() {
             {friends.map((f) => {
               const pending = f.status === "pending";
               const incoming = pending && f.direction === "incoming";
-
+              const src = resolveAvatarUrl(f.other.avatar_url);
               return (
                 <div
                   key={f.friendshipId}
@@ -456,35 +514,23 @@ export default function FriendPage() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 999,
-                        background: "rgba(0,0,0,0.06)",
-                        overflow: "hidden",
-                        flex: "0 0 auto",
-                      }}
-                    >
-                      {f.other.avatar_url ? (
-                        <img
-                          src={f.other.avatar_url}
-                          alt=""
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : null}
-                    </div>
+                    <Avatar
+                      username={f.other.username}
+                      avatarUrl={f.other.avatar_url}
+                    />
+
                     <div>
                       <div style={{ fontWeight: 700 }}>{f.other.username}</div>
                       <div style={{ fontSize: 12, opacity: 0.7 }}>
                         {f.status === "accepted"
                           ? "フレンド"
                           : incoming
-                          ? "申請が届いています"
-                          : "申請中"}
+                            ? "申請が届いています"
+                            : "申請中"}
                       </div>
                     </div>
                   </div>
+
 
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {f.status === "accepted" ? (
