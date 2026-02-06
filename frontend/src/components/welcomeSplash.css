@@ -104,27 +104,46 @@
   animation: ballDrop 1400ms cubic-bezier(0.22, 0.61, 0.2, 1) forwards;
 }
 
-/* ===== 着地点から広がる青（安定版） ===== */
+/* ===== 着地点から広がる青（安定：keyframes） ===== */
 .ws-flood{
   position: fixed;
   inset: 0;
   background: #039be5;
   opacity: 0;
   pointer-events: none;
+
+  /* 起点（JSで更新） */
   clip-path: circle(0px at var(--fx) var(--fy));
+  -webkit-clip-path: circle(0px at var(--fx) var(--fy));
+
   will-change: clip-path;
   transform: translateZ(0);
 }
 
-/* 1秒で全画面へ */
-.ws-root.ws-flood .ws-flood,
+/* ✅ floodフェーズで必ずアニメ */
+.ws-root.ws-flood .ws-flood{
+  opacity: 1;
+  animation: floodExpand 1000ms cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+}
+
+/* outでも塗りは維持 */
 .ws-root.ws-out .ws-flood{
   opacity: 1;
-  clip-path: circle(160vmax at var(--fx) var(--fy));
-  transition:
-    clip-path 1000ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
-    opacity 120ms ease;
+  clip-path: circle(180vmax at var(--fx) var(--fy));
+  -webkit-clip-path: circle(180vmax at var(--fx) var(--fy));
 }
+
+@keyframes floodExpand{
+  from{
+    clip-path: circle(0px at var(--fx) var(--fy));
+    -webkit-clip-path: circle(0px at var(--fx) var(--fy));
+  }
+  to{
+    clip-path: circle(180vmax at var(--fx) var(--fy));
+    -webkit-clip-path: circle(180vmax at var(--fx) var(--fy));
+  }
+}
+
 
 /* flood中は文字を白にして馴染ませる */
 .ws-root.ws-flood .ws-finalLine,
