@@ -32,7 +32,7 @@ function AppInner() {
 
   return (
     
-      <BootGate minimumMs={2500} ready={!authChecking}>
+      <BootGate minimumMs={5000} ready={!authChecking}>
       {/* ここに Routes / Layout / ProtectedRoute 等 */}
       <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1 }}>
