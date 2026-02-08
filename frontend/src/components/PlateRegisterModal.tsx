@@ -42,9 +42,11 @@ function digitsOnly4(raw: string) {
   return raw.replace(/\D/g, "").slice(-4);
 }
 
-function digitsOnly3(raw: string) {
-  return raw.replace(/\D/g, "").slice(0, 3);
+function normalizeClassNumberInput(raw: string) {
+  // 英数字だけにして大文字、最大3文字
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
 }
+
 
 function isHiragana(value: string) {
   return /^[\u3041-\u3096\u309D-\u309F]+$/.test(value);
@@ -292,6 +294,16 @@ export default function PlateRegisterModal({
 
       setDupMsg(msg || "保存に失敗しました");
     }
+
+    function isClassNumberValid(s: string) {
+  if (!s) return false;
+  if (!/^[A-Z0-9]{1,3}$/.test(s)) return false;
+  if (!/\d/.test(s)) return false; // 数字が1つは必要
+  return true;
+}
+
+
+
   };
 
   if (!open) return null;
@@ -409,11 +421,12 @@ export default function PlateRegisterModal({
             <input
               value={v.classNumber}
               onChange={(e) => {
-                const next = digitsOnly3(e.target.value);
+                const next = normalizeClassNumberInput(e.target.value);
                 setV((p) => ({ ...p, classNumber: next }));
               }}
-              type="tel"
-              inputMode="numeric"
+              type="text"
+              inputMode="text"
+              autoCapitalize="characters"
               placeholder="（例）582"
               style={{
                 width: "100%",
@@ -428,6 +441,7 @@ export default function PlateRegisterModal({
               }}
             />
           </Field>
+
 
           <Field label="ひらがな">
             <input
