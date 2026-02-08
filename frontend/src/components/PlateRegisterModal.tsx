@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { Region } from "../lib/region";
 import type { Plate, PlateColor } from "../storage/plates";
 import { addPlateCloud } from "../storage/platesCloud";
@@ -23,15 +23,6 @@ type FormState = {
   color: PlateColor | "";
 
   serialRaw: string; // ✅ 数字だけ（最大4桁）例: "3" "36" "364" "3645"
-};
-
-type PlateParseResult = {
-  regionName: string | null;
-  classNumber: string | null;
-  kana: string | null;
-  serial: string | null; // "84-29" or "8429" とか
-  confidence?: number | null;
-  notes?: string | null;
 };
 
 function fixSvgViewBox(svg: string) {
@@ -166,41 +157,6 @@ async function collectSerialOnce(params: {
   return { serial4, isFirst: !!data };
 }
 
-// ===== 画像読み取りユーティリティ =====
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("file read error"));
-    reader.onload = () => {
-      const s = String(reader.result || "");
-      const idx = s.indexOf("base64,");
-      if (idx >= 0) resolve(s.slice(idx + "base64,".length));
-      else reject(new Error("base64 not found"));
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function normalizeSerialToRaw4(serial: string | null) {
-  if (!serial) return "";
-  const digits = serial.replace(/[^\d]/g, "");
-  return digitsOnly4(digits);
-}
-
-function pickClosestRegionName(input: string, regions: Array<Region & { reading?: string }>) {
-  const s = input.trim();
-  if (!s) return "";
-
-  const exact = regions.find((r) => r.name === s);
-  if (exact) return exact.name;
-
-  const partial = regions.find((r) => r.name.includes(s) || s.includes(r.name));
-  if (partial) return partial.name;
-
-  return s;
-}
-
 export default function PlateRegisterModal({
   open,
   userId,
@@ -211,11 +167,6 @@ export default function PlateRegisterModal({
   const [v, setV] = useState<FormState>(initialState());
   const [done, setDone] = useState(false);
   const [dupMsg, setDupMsg] = useState<string>("");
-
-  // 画像読み取り state
-  const fileRef = useRef<HTMLInputElement | null>(null);
-  const [imgLoading, setImgLoading] = useState(false);
-  const [imgError, setImgError] = useState<string>("");
 
   const regionMatch = useMemo(() => {
     const name = v.regionName.trim();
@@ -264,73 +215,8 @@ export default function PlateRegisterModal({
     setV(initialState());
     setDone(false);
     setDupMsg("");
-    setImgError("");
     onClose();
   };
-
-  // ===== 画像読み取り handlers =====
-
-  const pickImage = () => {
-    setImgError("");
-    fileRef.current?.click();
-  };
-
-  const applyParsed = (parsed: PlateParseResult) => {
-    const rn = pickClosestRegionName(parsed.regionName ?? "", regions);
-    const match = regions.find((r) => r.name === rn) ?? null;
-
-    const serialRaw = normalizeSerialToRaw4(parsed.serial);
-
-    setV((p) => ({
-      ...p,
-      regionName: rn || p.regionName,
-      regionId: match?.id ?? p.regionId,
-      classNumber: digitsOnly3(parsed.classNumber ?? "") || p.classNumber,
-      kana: (parsed.kana ?? "").trim() || p.kana,
-      serialRaw: serialRaw || p.serialRaw,
-    }));
-  };
-
-  const onFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    try {
-      setImgLoading(true);
-      setImgError("");
-
-      const b64 = await fileToBase64(file);
-
-      const res = await fetch("/api/plate/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageBase64: b64,
-          regionCandidates: regions.map((r) => r.name),
-        }),
-      });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`画像の読み取りに失敗しました (${res.status}) ${t}`);
-      }
-
-      const parsed: PlateParseResult = await res.json();
-      applyParsed(parsed);
-
-      const conf = parsed.confidence ?? null;
-      if (conf != null && conf < 0.6) {
-        setImgError("読み取り精度が低い可能性があります。内容を確認してね。");
-      }
-    } catch (err: any) {
-      setImgError(err?.message ?? "画像の読み取りに失敗しました");
-    } finally {
-      setImgLoading(false);
-    }
-  };
-
-  // ===== submit =====
 
   const submit = async () => {
     if (done) return;
@@ -475,38 +361,6 @@ export default function PlateRegisterModal({
           ) : (
             <div style={{ width: "100%", height: "100%" }} dangerouslySetInnerHTML={{ __html: previewSvg }} />
           )}
-        </div>
-
-        {/* ✅ 画像から読み込み（プレビューと入力の間） */}
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14 }}>
-          <button
-            type="button"
-            onClick={pickImage}
-            disabled={imgLoading}
-            style={{
-              height: 44,
-              padding: "0 14px",
-              borderRadius: 12,
-              border: "2px solid #e5e7eb",
-              background: "#fff",
-              fontSize: 15,
-              fontWeight: 900,
-              cursor: imgLoading ? "not-allowed" : "pointer",
-              opacity: imgLoading ? 0.7 : 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {imgLoading ? "読み取り中..." : "画像から読み込む"}
-          </button>
-
-          <input ref={fileRef} type="file" accept="image/*" onChange={onFileChange} style={{ display: "none" }} />
-
-          <div style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.2 }}>
-            ナンバープレートだけ写ってる画像が得意
-            {imgError ? (
-              <div style={{ marginTop: 4, color: "#b45309", fontWeight: 800 }}>{imgError}</div>
-            ) : null}
-          </div>
         </div>
 
         {/* 入力欄：2カラム */}
@@ -685,11 +539,7 @@ export default function PlateRegisterModal({
           </div>
         </div>
 
-        {dupMsg && (
-          <div style={{ marginTop: 12, fontSize: 13, color: "#b45309" }}>
-            {dupMsg}
-          </div>
-        )}
+        {dupMsg && <div style={{ marginTop: 12, fontSize: 13, color: "#b45309" }}>{dupMsg}</div>}
 
         {/* 登録ボタン */}
         <div style={{ marginTop: 16 }}>
@@ -758,7 +608,7 @@ export default function PlateRegisterModal({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <div style={{ fontSize: 14, color: "#111827", marginBottom: 6 }}>{label}</div>
