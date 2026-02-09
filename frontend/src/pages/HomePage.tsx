@@ -14,6 +14,7 @@ import { loadRecordsCloud, saveRecordsCloud, clearRecordsCloud } from "../storag
 import PlatePeekModal from "../components/PlatePeekModal";
 import { listPlatesCloud } from "../storage/platesCloud";
 import type { Plate } from "../storage/plates";
+import UserSummaryBar from "../components/UserSummaryBar";
 
 
 function normRegionName(s: string) {
@@ -255,6 +256,7 @@ export default function HomePage() {
 
 
   return (
+
     <div className="container">
       <div className="header">
         <div>
@@ -371,7 +373,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-
+      <UserSummaryBar regions={regions} />
       <div className="stack">
 
         <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
@@ -417,6 +419,7 @@ export default function HomePage() {
         onClose={() => setHelpOpen(false)}
         onClearAll={handleClearAll}
       />
+
       <div style={{ display: "flex", gap: 10, marginBottom: 12, paddingTop: 10 }}>
         <button
           className="btn"
@@ -424,15 +427,15 @@ export default function HomePage() {
             width: "100%",
             height: 100,
             borderRadius: 14,
-            border: "none",
+            border: "10px inset #fff",
             fontSize: 21,
             fontWeight: "bold",
-            textShadow: "2px 2px 2px rgba(0,0,0,0.8)",
-            color: "#fff",
-            boxShadow: "0 6px 16px #a2d7dd",
-            backgroundImage:
-              "radial-gradient(circle at 100% 0%, rgba(111, 109, 255, 0.97) 15%, rgba(92,243,61,0.68))",
-            opacity: 0.7,
+            color: "#762f07",
+            background: "#946c45",
+            boxShadow: "0 6px 16px #96514d",
+            textShadow: "3px 1px 0 #fff1cf, -1px -1px 0 #fff1cf,-1px 1px 0 #fff1cf, 1px -1px 0 #fff1cf,0px 1px 0 #fff1cf, 0-1px 0 #fff1cf,-1px 0 0 #fff1cf, 1px 0 0 #fff1cf",
+
+            
           }}
           onClick={() => setPlateOpen(true)}
           disabled={!userId} // ✅ userId確定前は押せない

@@ -75,7 +75,7 @@ export default function PlatePeekModal({
         .pp-cardWrap { perspective: 1000px; }
         .pp-card {
           width: min(520px, 100%);
-          height: 340px;
+          height: 260px;
           position: relative;
           transform-style: preserve-3d;
           transition: transform 520ms cubic-bezier(.2,.9,.2,1);
@@ -110,12 +110,9 @@ export default function PlatePeekModal({
                 {/* header */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 900, color: "#111827", fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {title}
-                        </div>
                         {plate.capturedAt && (
-                            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>
-                                {formatCapturedAt(plate.capturedAt)}
+                            <div style={{ fontSize: 20, marginTop: 2 }}>
+                                撮影日：{formatCapturedAt(plate.capturedAt)}
                             </div>
                         )}
                     </div>

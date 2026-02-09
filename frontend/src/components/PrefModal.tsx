@@ -23,7 +23,11 @@ type PlateRow = {
   render_svg: string;
   created_at: string;
   photo_url: string | null;
+
+  // ✅ これを追加
+  captured_at: string | null;
 };
+
 
 function rowToPlate(r: PlateRow): Plate {
   return {
@@ -36,8 +40,12 @@ function rowToPlate(r: PlateRow): Plate {
     renderSvg: r.render_svg,
     createdAt: r.created_at,
     photo_url: r.photo_url ?? null,
+
+    // ✅ これを必ず追加
+    capturedAt: r.captured_at ?? null,
   };
 }
+
 
 export default function PrefModal({
   open,

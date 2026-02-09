@@ -12,9 +12,9 @@ const PREF_BY_CODE: Record<string, string> = {
 };
 
 function fillByStatus(status: PrefStatus) {
-  if (status === "complete") return "#d7003a";
-  if (status === "partial") return "#fef263";
-  return "#e5e7eb";
+  if (status === "complete") return "#e2041b";
+  if (status === "partial") return "#00b43d";
+  return "#ffffff";
 }
 
 export default function JapanMap({
@@ -52,7 +52,7 @@ export default function JapanMap({
       const status: PrefStatus = prog?.status ?? "none";
 
       el.style.fill = fillByStatus(status);
-      el.style.stroke = "#9ca3af";
+      el.style.stroke = "#762f07";
       el.style.strokeWidth = "1.5";
       el.style.cursor = "pointer";
 
@@ -65,7 +65,7 @@ export default function JapanMap({
   return (
     <div className="card">
       <div className="row spread" style={{ marginBottom: 8 }}>
-        <strong>日本地図</strong>
+        <strong style={{ color:"#664032",fontWeight:"1000"  }}>日本地図</strong>
         <span className="small">都道府県タップで地域マップ</span>
       </div>
 

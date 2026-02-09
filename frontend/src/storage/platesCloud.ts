@@ -33,6 +33,8 @@ export async function listPlatesByRegionIdCloud(
   }));
 }
 
+
+
 export async function addPlateCloud(userId: string, plate: Plate) {
   // ✅ 沖縄県は登録不可（最終防衛ライン）
   // plate.regionId が "沖縄県:那覇" 形式の想定なので先頭で判定
