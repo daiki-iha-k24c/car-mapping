@@ -8,14 +8,21 @@
   --accent2: #0ea5e9;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   background: var(--bg);
   color: var(--text);
 }
-a { color: inherit; text-decoration: none; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
 
 .container {
   max-width: 980px;
@@ -24,72 +31,80 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ヘッダー：スマホでも崩れない */
-.header{
-  display:flex;
-  align-items:center;        /* baselineは崩れやすいのでcenter推奨 */
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:12px;
-  background:#59b9c6;
-  color:#ffffff;
-  padding:12px 16px;
+.header {
+  display: flex;
+  align-items: center;
+  /* baselineは崩れやすいのでcenter推奨 */
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  background: #59b9c6;
+  color: #ffffff;
+  padding: 12px 16px;
 
-  flex-wrap:nowrap;          /* ✅ 絶対折り返さない */
+  flex-wrap: nowrap;
+  /* ✅ 絶対折り返さない */
 }
 
 /* 左側タイトルブロックは縮められるように */
-.header > div:first-child{
-  min-width:0;               /* ✅ これが超重要 */
+.header>div:first-child {
+  min-width: 0;
+  /* ✅ これが超重要 */
 }
 
 /* 右側は常に右寄せ・折り返し禁止 */
-.header-actions{
-  position:relative;         /* ✅ popoverの基準 */
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  flex-wrap:nowrap;
-  white-space:nowrap;
-  gap:8px;
+.header-actions {
+  position: relative;
+  /* ✅ popoverの基準 */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 8px;
 }
 
 /* 今はactions-mobileだけ使ってるので表示を保証 */
-.actions-mobile{
-  display:block;
-  position:relative;         /* ✅ popoverの基準をここにしてもOK */
+.actions-mobile {
+  display: block;
+  position: relative;
+  /* ✅ popoverの基準をここにしてもOK */
 }
 
 /* メニュー（popover） */
-.menu-popover{
-  position:absolute;
-  right:0;
-  top:52px;                  /* ボタンの下に */
-  width:300px;
-  background:#f9fafb;              /* ← 背景 */
-  border:1px solid black;        /* ← 枠線 */
-  border-radius:12px;
-  box-shadow:0 12px 30px rgba(0,0,0,0.18);
-  overflow:hidden;
-  z-index:99999;
+.menu-popover {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  /* ボタンの下に */
+  width: 300px;
+  background: #f9fafb;
+  /* ← 背景 */
+  border: 1px solid black;
+  /* ← 枠線 */
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  z-index: 99999;
 }
 
-.menu-item{
-  display:block;
-  width:100%;
+.menu-item {
+  display: block;
+  width: 100%;
   height: 50px;
-  text-align:left;
-  padding:12px 12px;
-  background:#ffffff;
-  border:1px solid gray;
-  cursor:pointer;
-  font-size:17px;
+  text-align: left;
+  padding: 12px 12px;
+  background: #ffffff;
+  border: 1px solid gray;
+  cursor: pointer;
+  font-size: 17px;
   font-weight: 500;
-  color:var(--text);
-  text-decoration:none;
+  color: var(--text);
+  text-decoration: none;
 }
 
-.menu-item:hover{
-  background:#f3f4f6;
+.menu-item:hover {
+  background: #f3f4f6;
 }
 
 
@@ -99,10 +114,13 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
-.stack { display: grid; gap: 12px; }
+.stack {
+  display: grid;
+  gap: 12px;
+}
 
 .btn {
   border: 1px solid var(--border);
@@ -114,12 +132,17 @@ a { color: inherit; text-decoration: none; }
   font-weight: 500;
   color: black;
 }
+
 .btn.primary {
   border-color: transparent;
   background: linear-gradient(90deg, var(--accent), var(--accent2));
-  
+
 }
-.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .badge {
   display: inline-flex;
@@ -132,11 +155,13 @@ a { color: inherit; text-decoration: none; }
   color: var(--muted);
   background: #fff;
 }
+
 .badge.done {
   color: #065f46;
   border-color: #a7f3d0;
   background: #ecfdf5;
 }
+
 .badge.todo {
   color: #92400e;
   border-color: #fde68a;
@@ -151,19 +176,27 @@ a { color: inherit; text-decoration: none; }
   outline: none;
   font-size: 16px;
 }
-.small { color: var(--muted); font-size: 13px; }
+
+.small {
+  color: var(--muted);
+  font-size: 13px;
+}
 
 .row {
   display: flex;
   gap: 10px;
   align-items: center;
 }
-.row.spread { justify-content: space-between; }
+
+.row.spread {
+  justify-content: space-between;
+}
 
 .list {
   display: grid;
   gap: 8px;
 }
+
 .item {
   display: flex;
   align-items: center;
@@ -174,25 +207,33 @@ a { color: inherit; text-decoration: none; }
   border-radius: 12px;
   background: #fff;
 }
-.item strong { font-size: 15px; }
-.item .meta { color: var(--muted); font-size: 12px; }
+
+.item strong {
+  font-size: 15px;
+}
+
+.item .meta {
+  color: var(--muted);
+  font-size: 12px;
+}
 
 /* modal */
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
   display: grid;
   place-items: center;
   padding: 16px;
 }
+
 .modal {
   width: min(520px, 100%);
   background: white;
   border-radius: 16px;
   border: 1px solid var(--border);
   padding: 14px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
 /* ===== Modal ===== */
@@ -215,8 +256,10 @@ a { color: inherit; text-decoration: none; }
   padding: 16px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
+
 /* スマホ前提：余計なズーム・横スクロールを防ぐ */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
@@ -230,7 +273,9 @@ html, body {
 }
 
 /* タップしやすいサイズ */
-.btn, button, input {
+.btn,
+button,
+input {
   min-height: 30px;
 }
 
@@ -260,11 +305,11 @@ html, body {
   justify-content: center;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255,255,255,0.55);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .serial-ph {
-  background: rgba(255,255,255,0.28);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .serial-num {
@@ -285,4 +330,37 @@ html, body {
 .serial-svg svg {
   width: 100%;
   height: 100%;
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shine {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  30% {
+    opacity: .9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(18px);
+  }
 }

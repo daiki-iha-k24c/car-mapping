@@ -23,7 +23,7 @@ function palette(color: PlateColor) {
   // 画像の黄色：濃い黄 + 黒文字
   if (color === "yellow") return { bg: "#FFD400", ink: "#000000" };
   if (color === "green") return { bg: "#15803D", ink: "#FFFFFF" };
-  if (color === "pink") return { bg: "#FF4FA3", ink: "#FFFFFF" };
+  if (color === "black") return { bg: "#000000", ink: "#FFD400" };
   return { bg: "#FFFFFF", ink: "#0B4F2A" };
 }
 
@@ -215,65 +215,7 @@ function renderEmptyPreview() {
 `.trim();
 }
 
-// export function renderPlateSvg({ regionName, classNumber, kana, serial, color }: Args) {
-//   const isEmpty = !regionName && !classNumber && !kana && !serial;
-//   if (isEmpty) return renderEmptyPreview();
 
-//   const { bg, ink } = palette(color);
-//   const border = "#111827";
-//   const screw = "#9CA3AF";
-
-//   // ====== 上段配置（理想画像に寄せた値） ======
-//   const topY = 50;      // 上段baseline
-//   const midX = 180;     // 「地域+分類番号」塊の中心
-//   const gap = 5;        // 地域と分類番号の間隔
-//   const topFont = 40;   // 上段フォント
-//   // ============================================
-
-//   // ====== かな配置 ======
-//   const kanaX = 14;
-//   const kanaY = 135;
-//   const kanaFont = 50;
-//   // =====================
-  
-//   // テキストの太さを明示（スマホで太く見える差の吸収に効く）
-//   const weightNormal = 600; // 地域・分類・かな
-//   const weightSerial = 700; // 番号は少し強め
-
-//   return `
-// <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-//   <!-- ✅ 背景＋枠（二重） ※これが「枠線」 -->
-//   <rect x="3" y="6" width="${W - 9}" height="${H - 9}" rx="10"
-//         fill="${bg}" stroke="${border}" stroke-width="4"/>
-
-//   <!-- ねじ穴 -->
-//   <circle cx="34" cy="30" r="8" fill="${screw}"/>
-//   <circle cx="${W - 34}" cy="30" r="8" fill="${screw}"/>
-
-//   <!-- 上段：地域（右寄せ） -->
-//   <text x="${midX - gap}" y="${topY}" fill="${ink}"
-//     font-size="${topFont}" 
-//     font-weight="900"
-//     font-family="system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif"
-//     text-anchor="end" dominant-baseline="alphabetic">${esc(regionName)}</text>
-
-//   <!-- 上段：分類番号（左寄せ） -->
-//   <text x="${midX + gap}" y="${topY}" fill="${ink}"
-//     font-size="${topFont}" font-weight="900"
-//     font-family="system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif"
-//     text-anchor="start" dominant-baseline="alphabetic">${esc(classNumber)}</text>
-
-//   <!-- かな -->
-//   <text x="${kanaX}" y="${kanaY}" fill="${ink}"
-//     font-size="${kanaFont}" font-weight="900"
-//     font-family="system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif"
-//     text-anchor="start" dominant-baseline="alphabetic">${esc(kana)}</text>
-
-//   <!-- ナンバー -->
-//   ${renderSerial(ink, serial)}
-// </svg>
-// `.trim();
-// }
 
 export function renderPlateSvg({ regionName, classNumber, kana, serial, color }: Args) {
   const isEmpty = !regionName && !classNumber && !kana && !serial;
@@ -306,8 +248,11 @@ export function renderPlateSvg({ regionName, classNumber, kana, serial, color }:
   const weightSerial = 600; // 番号は少し強め
 
   return `
-<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-  <!-- ✅ 背景＋枠（二重） ※これが「枠線」 -->
+<svg
+  viewBox="0 0 480 240"
+  preserveAspectRatio="xMidYMid meet"
+  xmlns="http://www.w3.org/2000/svg"
+>  <!-- ✅ 背景＋枠（二重） ※これが「枠線」 -->
   <rect x="3" y="6" width="${W - 9}" height="${H - 9}" rx="10"
         fill="${bg}" stroke="${border}" stroke-width="4"/>
 

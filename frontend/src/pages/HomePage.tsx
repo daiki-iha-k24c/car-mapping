@@ -5,17 +5,16 @@ import CompleteModal from "../components/CompleteModal";
 import PrefModal from "../components/PrefModal";
 import HelpModal from "../components/HelpModal";
 import PlateRegisterModal from "../components/PlateRegisterModal";
-
 import type { Region, RegionRecord } from "../lib/region";
 import { regions, buildPrefProgress } from "../lib/regionIndex";
 import { PLATE_REGIONS } from "../data/plateRegions";
-
 import { supabase } from "../lib/supabaseClient";
-import { loadRecords, saveRecords, clearRecords } from "../lib/storage";
-import { clearPlates } from "../storage/plates";
-
 import { useUser } from "../context/UserContext";
 import { loadRecordsCloud, saveRecordsCloud, clearRecordsCloud } from "../storage/regionRecordsCloud";
+import PlatePeekModal from "../components/PlatePeekModal";
+import { listPlatesCloud } from "../storage/platesCloud";
+import type { Plate } from "../storage/plates";
+
 
 function normRegionName(s: string) {
   return (s || "").trim().replace(/\s+/g, "");
@@ -61,6 +60,16 @@ export default function HomePage() {
 
   // ✅ ホームから開く登録モーダル
   const [plateOpen, setPlateOpen] = useState(false);
+  // ✅ 登録済みプレート一覧（ホームで表示＆ポップアップ用）
+  const [plates, setPlates] = useState<Plate[]>([]);
+  const [peekOpen, setPeekOpen] = useState(false);
+  const [peekPlate, setPeekPlate] = useState<Plate | null>(null);
+
+  const openPlate = (p: Plate) => {
+    setPeekPlate(p);
+    setPeekOpen(true);
+  };
+
 
   // ✅ localStorage分離に使う userId（Supabase user.id）
 
@@ -119,6 +128,15 @@ export default function HomePage() {
       setRecordMap(m);
     })().catch(console.error);
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const rows = await listPlatesCloud(userId);
+      setPlates(rows);
+    })().catch(console.error);
+  }, [userId]);
+
 
   // 3) recordMap が変わったら保存（※レンダー中に保存しない）
   useEffect(() => {
@@ -233,6 +251,8 @@ export default function HomePage() {
     () => avatarToPublicUrl(me?.avatar_url ?? null),
     [me?.avatar_url]
   );
+
+
 
   return (
     <div className="container">
@@ -363,6 +383,7 @@ export default function HomePage() {
           recordMap={recordMap}
           userId={userId}
           onClose={closePref}
+          onOpenPlate={openPlate}
         // PrefModal内で地域クリック→達成モーダルを開く設計ならこれを渡す
         // onPickRegion={openComplete}
         />
@@ -382,11 +403,15 @@ export default function HomePage() {
         userId={userId}
         regions={regionsWithReading}
         onClose={() => setPlateOpen(false)}
-        onRegistered={(regionName: string) => {
+        onRegistered={async (regionName: string) => {
           markCompletedByRegionName(regionName);
         }}
       />
-
+      <PlatePeekModal
+        open={peekOpen}
+        plate={peekPlate}
+        onClose={() => setPeekOpen(false)}
+      />
       <HelpModal
         open={helpOpen}
         onClose={() => setHelpOpen(false)}

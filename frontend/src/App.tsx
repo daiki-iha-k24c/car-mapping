@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate,BrowserRouter } from "react-router-dom";
+import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import RegionListPage from "./pages/RegionListPage";
 import RegionPage from "./pages/RegionPage";
@@ -18,12 +18,16 @@ import AppFooter from "./components/AppFooter";
 import WelcomeSplash from "./components/WelcomeSplash";
 import { useUser } from "./context/UserContext";
 import BootGate from "./components/BootGate";
+import { PlatePeekProvider } from "./context/PlatePeekContext";
 
 export default function App() {
   return (
     <UserProvider>
+      <PlatePeekProvider>
         <AppInner />
+      </PlatePeekProvider>
     </UserProvider>
+
   );
 }
 
@@ -31,8 +35,8 @@ function AppInner() {
   const { authChecking } = useUser();
 
   return (
-    
-      <BootGate minimumMs={5000} ready={!authChecking}>
+
+    <BootGate minimumMs={5000} ready={!authChecking}>
       {/* ここに Routes / Layout / ProtectedRoute 等 */}
       <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1 }}>
@@ -86,7 +90,7 @@ function AppInner() {
               }
             />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </div>
 

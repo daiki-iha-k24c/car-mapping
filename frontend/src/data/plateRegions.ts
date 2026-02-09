@@ -184,5 +184,4 @@ export const PLATE_REGIONS: PlateRegionReading[] = [
   { prefecture: "鹿児島県", name: "鹿児島", reading: "かごしま" },
   { prefecture: "鹿児島県", name: "奄美", reading: "あまみ" },
 
-  { prefecture: "沖縄県", name: "沖縄", reading: "おきなわ" },
 ];

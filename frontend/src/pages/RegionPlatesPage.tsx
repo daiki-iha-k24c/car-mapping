@@ -3,10 +3,21 @@ import { useParams, Link } from "react-router-dom";
 import { regions } from "../lib/regionIndex";
 import { listPlatesByRegionId } from "../storage/plates";
 import { supabase } from "../lib/supabaseClient";
+import PlatePeekModal from "../components/PlatePeekModal";
+import type { Plate } from "../storage/plates";
+import FlipPlateCard from "../components/FlipPlateCard";
 
 export default function RegionPlatesPage() {
   const { regionId } = useParams();
   const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  const [peekOpen, setPeekOpen] = useState(false);
+  const [peekPlate, setPeekPlate] = useState<Plate | null>(null);
+
+  const openPlate = (p: Plate) => {
+    setPeekPlate(p);
+    setPeekOpen(true);
+  };
 
   // userId取得（HomePageと同じ：匿名ログイン含む）
   useEffect(() => {
@@ -59,33 +70,13 @@ export default function RegionPlatesPage() {
       ) : (
         <div className="stack" style={{ gap: 12 }}>
           {plates.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                background: "#fff",
-                borderRadius: 12,
-                padding: 12,
-                boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-              }}
-            >
-              {/* renderSvg を表示（既存仕様に合わせる） */}
-              <div
-                dangerouslySetInnerHTML={{ __html: p.renderSvg }}
-                style={{ width: "100%", overflow: "hidden" }}
-              />
-
-              <div style={{ marginTop: 8, opacity: 0.85 }}>
-                <div style={{ fontWeight: 700 }}>
-                  {p.classNumber} {p.kana} {p.serial}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  {new Date(p.createdAt).toLocaleString()}
-                </div>
-              </div>
+            <div key={p.id} style={{ marginBottom: 12 }}>
+              <FlipPlateCard plate={p} compact/>
             </div>
           ))}
         </div>
       )}
     </div>
+
   );
 }

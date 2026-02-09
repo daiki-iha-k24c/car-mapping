@@ -103,9 +103,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const loadProfile = useCallback(
     async (uid: string) => {
-      setProfileStatus("loading");
+      // 既に ready のときは落とさない。そうでなければ loading に。
+      setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
 
-      // まずキャッシュから即復元
+      // まずキャッシュから即復元（UX優先）
       hydrateFromCache(uid);
 
       try {
@@ -120,38 +121,51 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           8000
         );
 
+        // ---- soft error（RLS / ネットワーク等）----
         if (error) {
-          console.warn("profiles read error:", error);
-          // ✅ UI維持（userIdは落とさない）
-          setProfileStatus("error");
+          console.warn("profiles read error (soft):", error);
+          // ✅ missing にしない（通信揺れで onboarding に飛ばない）
+          setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
           return;
         }
 
-        // ✅ ここが重要：プロフィール行が無い → missing
+        // ---- プロフィール行が無い（= 確定 missing）----
         if (!data) {
           setUsername(null);
           setAvatarUrl(null);
-          setProfileStatus("missing");
+          setProfileStatus("missing"); // ← ここだけが missing
           return;
         }
 
+        // ---- 正常 ----
         const nextUsername = data.username ?? null;
         const nextAvatar = data.avatar_url ?? null;
 
         setUsername(nextUsername);
         setAvatarUrl(nextAvatar);
-
         writeProfileCache(uid, { username: nextUsername, avatarUrl: nextAvatar });
 
         setProfileStatus("ready");
-      } catch (e) {
-        console.warn("profiles read timeout/error:", e);
-        // ✅ UI維持（userIdは落とさない）
+      } catch (e: any) {
+        const msg = String(e?.message ?? e);
+
+        // ---- timeout は soft ----
+        if (msg.toLowerCase().includes("timeout")) {
+          console.warn("profiles read timeout (soft):", e);
+          // ✅ ready を落とさず、それ以外は loading 維持
+          setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
+          return;
+        }
+
+        // ---- それ以外の例外のみ error ----
+        console.error("profiles read exception:", e);
         setProfileStatus("error");
       }
     },
     [hydrateFromCache]
   );
+
+
 
   const retryProfile = useCallback(async () => {
     const now = Date.now();
@@ -163,19 +177,35 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const uid = data.session?.user?.id;
 
       if (!uid) {
-        // ✅ 復帰失敗でも userId を“落とさない”
-        // （本当にログアウト確定は authChecking後に ProtectedRoute が判断）
-        setProfileStatus("error");
+        // ✅ ここで error にしない（瞬断・重さで落ちる）
+        console.warn("retryProfile: no uid (soft)");
+        setProfileStatus((prev) => (prev === "ready" ? "ready" : prev));
         return;
       }
 
-      setUserId(uid);
+      // setUserId(uid);
+      setUserId((prev) => (prev === uid ? prev : uid));
+      if (profileStatus === "ready") return;
+
       await loadProfile(uid);
-    } catch (e) {
-      console.warn("retryProfile timeout/error:", e);
+    } catch (e: any) {
+      const msg = String(e?.message ?? e);
+
+      if (msg.toLowerCase().includes("timeout")) {
+        console.warn("retryProfile timeout (soft):", e);
+        setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
+        return;
+      }
+
+      console.error("retryProfile error:", e);
       setProfileStatus("error");
     }
   }, [loadProfile]);
+
+  useEffect(() => {
+    console.log("[UC]", { userId, profileStatus, authChecking });
+  }, [userId, profileStatus, authChecking]);
+
 
   useEffect(() => {
     let alive = true;
@@ -256,7 +286,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setAvatarUrl(null);
         }
 
-        setProfileStatus("error");
+        setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
       } finally {
         if (!alive) return;
         setAuthChecking(false); // ✅ 追加：復元期間終了

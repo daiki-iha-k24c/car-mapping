@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Region } from "../lib/region";
 import type { Plate, PlateColor } from "../storage/plates";
 import { addPlateCloud } from "../storage/platesCloud";
@@ -23,28 +23,38 @@ type FormState = {
   color: PlateColor | "";
 
   serialRaw: string; // ✅ 数字だけ（最大4桁）例: "3" "36" "364" "3645"
+  capturedAt: string;
 };
 
+function ensureViewBox(svg: string) {
+  // 既に viewBox があっても、無くても、必ず 320x180 に固定
+  if (/viewBox="/i.test(svg)) {
+    return svg.replace(/viewBox="[^"]*"/i, 'viewBox="0 0 320 180"');
+  }
+  // viewBox が無い場合：<svg ...> に追加
+  return svg.replace(/<svg\b/i, '<svg viewBox="0 0 320 180"');
+}
+
 function fixSvgViewBox(svg: string) {
-  // 既存 HomePage と同じ補正
-  return svg.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
+  return ensureViewBox(svg);
 }
 
 const COLORS: Array<{ label: string; value: PlateColor }> = [
   { label: "白", value: "white" },
   { label: "黄", value: "yellow" },
   { label: "緑", value: "green" },
-  { label: "ピンク", value: "pink" },
+  { label: "黒", value: "black" },
 ];
 
 function digitsOnly4(raw: string) {
-  // 数字だけ抽出して末尾4桁だけ残す（ペースト対策）
   return raw.replace(/\D/g, "").slice(-4);
 }
 
-function normalizeClassNumberInput(raw: string) {
-  // 英数字だけにして大文字、最大3文字
-  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
+function classNumberNormalize(raw: string) {
+  return raw
+    .toUpperCase()          // 小文字 → 大文字
+    .replace(/[^0-9A-Z]/g, "") // 数字とA–Z以外を除外
+    .slice(0, 3);           // 最大3文字
 }
 
 
@@ -52,27 +62,17 @@ function isHiragana(value: string) {
   return /^[\u3041-\u3096\u309D-\u309F]+$/.test(value);
 }
 
-// プレビュー用：右詰めで「・」埋め（例: "3"→"・・・3"）
 function serialPreviewRightDots(raw: string) {
   const d = digitsOnly4(raw);
   if (!d) return "";
-
-  // ✅ 4桁揃ったら 12-34 にしてプレビューもハイフン表示
   if (d.length === 4) return `${d.slice(0, 2)}-${d.slice(2)}`;
-
-  // ✅ 途中は右詰め「・」埋め（例: "3"→"・・・3"）
   return d.padStart(4, "・");
 }
 
-// 保存用：4桁そろったら "12-34"
 function serialForSave(raw: string) {
   const d = digitsOnly4(raw);
-  if (!d) return ""; // 0桁は不可
-
-  // 4桁はハイフン形式
+  if (!d) return "";
   if (d.length === 4) return `${d.slice(0, 2)}-${d.slice(2)}`;
-
-  // 1〜3桁は右詰め点埋め（・・・1 / ・・12 / ・123）
   return d.padStart(4, "・");
 }
 
@@ -89,39 +89,36 @@ function initialState(): FormState {
     kana: "",
     color: "",
     serialRaw: "",
+    capturedAt: ""
   };
 }
 
 function fitSvgToBox(svg: string) {
-  let s = svg;
-
-  // viewBox を固定
-  s = s.replace(/viewBox="0 0"/g, 'viewBox="0 0 320 180"');
+  let s = ensureViewBox(svg);
 
   // ✅ 重要：<svg ...> の中だけを置換して width/height を削除する
   s = s.replace(/<svg\b[^>]*>/i, (tag) => {
     let t = tag;
 
-    // svg の width/height だけ削除（rectなどのは残す）
+    // svg の width/height だけ削除
     t = t.replace(/\s(width|height)="[^"]*"/g, "");
 
-    // 属性付与（styleは壊さない）
-    if (!/\swidth=/.test(t)) t = t.replace(/>$/, ' width="100%">');
-    if (!/\sheight=/.test(t)) t = t.replace(/>$/, ' height="100%">');
+    // ✅ ここを「100%固定」じゃなく「maxで収める」に変える
+    // width/height 属性は付けない（ズレの原因になりやすい）
     if (!/\spreserveAspectRatio=/.test(t)) {
       t = t.replace(/>$/, ' preserveAspectRatio="xMidYMid meet">');
     }
 
-    // style は追記
+    // style 追記（maxで収める）
+    const add = "display:block; max-width:100%; max-height:100%; width:auto; height:auto;";
     if (/\sstyle="/i.test(t)) {
       t = t.replace(/\sstyle="([^"]*)"/i, (_m, p1) => {
         const base = (p1 || "").trim();
-        const hasDisplay = /(^|;)\s*display\s*:/i.test(base);
-        const next = hasDisplay ? base : base ? `${base}; display:block;` : "display:block;";
+        const next = base ? `${base}; ${add}` : add;
         return ` style="${next}"`;
       });
     } else {
-      t = t.replace(/>$/, ' style="display:block;">');
+      t = t.replace(/>$/, ` style="${add}">`);
     }
 
     return t;
@@ -130,23 +127,23 @@ function fitSvgToBox(svg: string) {
   return s;
 }
 
+
 async function collectSerialOnce(params: {
   regionName: string;
   classNumber: string;
   kana: string;
-  serialRaw: string; // 達成判定用（数字だけでもOK）
-  serialDisplay: string; // ★表示用（"・・・1" / "12-34"）
+  serialRaw: string;
+  serialDisplay: string;
   color: PlateColor;
 }) {
   const serial4 = normalizeSerial4(params.serialRaw);
   if (!serial4) throw new Error("下4桁が不正です（0〜4桁の数字で入力してね）");
 
-  // ★表示は「登録時の見た目」を優先
   const svg = renderPlateSvg({
     regionName: params.regionName,
     classNumber: params.classNumber,
     kana: params.kana,
-    serial: params.serialDisplay, // ←ここが重要
+    serial: params.serialDisplay,
     color: params.color,
   });
 
@@ -159,6 +156,75 @@ async function collectSerialOnce(params: {
   return { serial4, isFirst: !!data };
 }
 
+/** ✅ 追加：画像アップロード（Supabase Storage） */
+async function uploadPlateImage(args: {
+  userId: string;
+  plateId: string;
+  file: File;
+}) {
+  const bucket = "plate-images"; // ← Storage にこのバケット名で作ってね
+  const ext = (args.file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${args.userId}/${args.plateId}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from(bucket)
+    .upload(path, args.file, {
+      upsert: true,
+      contentType: args.file.type || "image/jpeg",
+      cacheControl: "3600",
+    });
+
+  if (upErr) throw upErr;
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl; // 公開URL（※非公開運用したいなら signedURL に変更）
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 14, color: "#111827", marginBottom: 6 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function Select({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        width: "100%",
+        height: 44,
+        borderRadius: 12,
+        border: "2px solid #e5e7eb",
+        padding: "0 12px",
+        fontSize: 16,
+        outline: "none",
+        background: "#fff",
+      }}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function PlateRegisterModal({
   open,
   userId,
@@ -166,9 +232,29 @@ export default function PlateRegisterModal({
   onClose,
   onRegistered,
 }: PlateRegisterModalProps) {
+  // ✅ hooksは必ずここに集約（順番固定）
   const [v, setV] = useState<FormState>(initialState());
   const [done, setDone] = useState(false);
   const [dupMsg, setDupMsg] = useState<string>("");
+
+  const [saving, setSaving] = useState(false);
+  const [okMsg, setOkMsg] = useState<string>("");
+  const [tried, setTried] = useState(false);
+
+  // ✅ 画像
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview("");
+      return;
+    }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
 
   const regionMatch = useMemo(() => {
     const name = v.regionName.trim();
@@ -185,13 +271,16 @@ export default function PlateRegisterModal({
 
   const serial = useMemo(() => serialPreviewRightDots(v.serialRaw), [v.serialRaw]);
 
+  // ✅ 画像必須・ログイン必須もここに含めるとUX良い
   const canSubmit =
+    !!userId &&
     isRegionValid &&
     !!regionMatch?.id &&
     !!v.classNumber &&
     isKanaValid &&
     !!v.color &&
-    digitsOnly4(v.serialRaw).length >= 1;
+    digitsOnly4(v.serialRaw).length >= 1 &&
+    !!photoFile;
 
   const isPristine = !v.regionName && !v.classNumber && !v.kana && !v.color && !v.serialRaw;
 
@@ -213,24 +302,88 @@ export default function PlateRegisterModal({
     );
   }, [v.regionName, v.classNumber, v.kana, v.color, serial, regionMatch?.name, kanaValue]);
 
+  const sortedRegions = useMemo(() => {
+    return regions.slice().sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  }, [regions]);
+
   const closeAll = () => {
     setV(initialState());
     setDone(false);
+    setSaving(false);
+    setTried(false);
     setDupMsg("");
+    setOkMsg("");
+    setPhotoFile(null);
+    setPhotoPreview("");
     onClose();
   };
 
-  const submit = async () => {
-    if (done) return;
-    if (!isRegionValid || !isKanaValid || !canSubmit) return;
+  type SubmitState = "idle" | "saving" | "done";
+  const submitState: SubmitState = done ? "done" : saving ? "saving" : "idle";
 
+  const submitStyleMap: Record<SubmitState, React.CSSProperties> = {
+    idle: {
+      background: "#f97316",
+      boxShadow: "0 6px 16px rgba(249,115,22,0.35)",
+      cursor: "pointer",
+    },
+    saving: {
+      background: "#60a5fa",
+      boxShadow: "0 6px 16px rgba(96,165,250,0.35)",
+      cursor: "wait",
+    },
+    done: {
+      background: "#10b981",
+      boxShadow: "0 6px 16px rgba(16,185,129,0.35)",
+      cursor: "default",
+    },
+  };
+
+  // ✅ ホームから開く登録モーダル
+  const [plateOpen, setPlateOpen] = useState(false);
+
+  // ✅ 登録済みプレート（ホームで押して確認用）
+  const [plates, setPlates] = useState<Plate[]>([]);
+  const [peekOpen, setPeekOpen] = useState(false);
+  const [peekPlate, setPeekPlate] = useState<Plate | null>(null);
+
+  const openPlate = (p: Plate) => {
+    setPeekPlate(p);
+    setPeekOpen(true);
+  };
+
+
+  // ✅ hooksの後にreturn（これが鉄則）
+  if (!open) return null;
+
+  const submit = async () => {
+    if (done || saving) return;
+
+    // ✅ まず tried を立てる（押したことを記録）
+    setTried(true);
+
+    // ✅ 条件不足なら押下しても何もしない（メッセージだけ出したい場合はここでdupMsg）
+    if (!canSubmit) {
+      if (!photoFile) setDupMsg("画像は必須です。プレート写真を選択してください。");
+      return;
+    }
+
+    setSaving(true);
+    setDupMsg("");
+    setOkMsg("");
+
+    // canSubmit に userId 入ってるけど念のため
     if (!userId) {
       setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
+      setSaving(false);
       return;
     }
 
     const serialValue = serialForSave(v.serialRaw);
-    if (!serialValue) return;
+    if (!serialValue) {
+      setSaving(false);
+      return;
+    }
 
     const color = v.color as PlateColor;
 
@@ -244,8 +397,11 @@ export default function PlateRegisterModal({
       })
     );
 
+    const plateId = crypto.randomUUID();
+    const capturedAtIso = v.capturedAt ? new Date(`${v.capturedAt}T00:00:00`).toISOString() : null;
+
     const plate: Plate = {
-      id: crypto.randomUUID(),
+      id: plateId,
       regionId: regionMatch?.id ?? v.regionId,
       classNumber: v.classNumber,
       kana: kanaValue,
@@ -253,27 +409,31 @@ export default function PlateRegisterModal({
       color,
       renderSvg: svg,
       createdAt: new Date().toISOString(),
+      capturedAt: capturedAtIso,
     };
 
     try {
-      // 🔑 regionId を PrefModal と完全一致させる
-      const regionId = `${regionMatch.pref}:${regionMatch.name}`;
+      const regionId = `${regionMatch!.pref}:${regionMatch!.name}`;
+
+      // ✅ 画像は必須なので必ず upload
+      const photoUrl = await uploadPlateImage({
+        userId,
+        plateId,
+        file: photoFile!, // canSubmitで保証
+      });
 
       const plateFixed = {
         ...plate,
-        regionId, // ← ここが最重要
-        regionName: regionMatch.name,
-        prefName: regionMatch.pref,
+        regionId,
+        regionName: regionMatch!.name,
+        prefName: regionMatch!.pref,
+        photo_url: photoUrl,
       };
 
-      console.log("SAVE userId", userId, "regionId", regionId);
-
-      // ① まずプレート保存
       await addPlateCloud(userId, plateFixed);
 
-      // ② 4桁コレクション登録
       await collectSerialOnce({
-        regionName: regionMatch?.name ?? v.regionName.trim(),
+        regionName: regionMatch!.name,
         classNumber: v.classNumber,
         kana: kanaValue,
         serialRaw: v.serialRaw,
@@ -281,32 +441,30 @@ export default function PlateRegisterModal({
         color,
       });
 
-      onRegistered(regionMatch?.name ?? v.regionName.trim());
       setDone(true);
-      setDupMsg("");
+      setOkMsg("登録が完了しました ✅");
+
+      // ✅ 即反映
+      onRegistered(regionMatch!.name);
+
+      // ✅ 少し見せてから閉じる
+      setTimeout(() => {
+        closeAll();
+      }, 900);
     } catch (e: any) {
       const msg = String(e?.message ?? "");
-
       if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
         setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
-        return;
+      } else {
+        setDupMsg(msg || "保存に失敗しました");
       }
-
-      setDupMsg(msg || "保存に失敗しました");
+    } finally {
+      setSaving(false);
     }
-
-    function isClassNumberValid(s: string) {
-  if (!s) return false;
-  if (!/^[A-Z0-9]{1,3}$/.test(s)) return false;
-  if (!/\d/.test(s)) return false; // 数字が1つは必要
-  return true;
-}
-
-
-
   };
 
-  if (!open) return null;
+  // ↓↓↓ ここから先の JSX は、あなたの既存の return をそのまま使ってOK
+  // （画像UI、登録ボタン、完了メッセージなど）
 
   return (
     <div
@@ -334,6 +492,11 @@ export default function PlateRegisterModal({
           borderRadius: 20,
           padding: 16,
           boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+
+          // ✅ 追加：画面内に収めて中をスクロール
+          maxHeight: "min(86vh, 740px)",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {/* プレビュー */}
@@ -371,7 +534,16 @@ export default function PlateRegisterModal({
               プレビュー
             </div>
           ) : (
-            <div style={{ width: "100%", height: "100%" }} dangerouslySetInnerHTML={{ __html: previewSvg }} />
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              dangerouslySetInnerHTML={{ __html: previewSvg }}
+            />
           )}
         </div>
 
@@ -390,7 +562,6 @@ export default function PlateRegisterModal({
                 }));
                 setDupMsg("");
               }}
-              list="region-options"
               placeholder="（例）品川"
               style={{
                 width: "100%",
@@ -408,26 +579,23 @@ export default function PlateRegisterModal({
             {regionError && <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>{regionError}</div>}
 
             <datalist id="region-options">
-              {regions
-                .slice()
-                .sort((a, b) => a.name.localeCompare(b.name, "ja"))
-                .map((r) => (
-                  <option key={r.id} value={r.name} />
-                ))}
+              {sortedRegions.map((r) => (
+                <option key={r.id} value={r.name} />
+              ))}
             </datalist>
+
           </Field>
 
           <Field label="分類番号">
             <input
               value={v.classNumber}
               onChange={(e) => {
-                const next = normalizeClassNumberInput(e.target.value);
+                const next = classNumberNormalize(e.target.value);
                 setV((p) => ({ ...p, classNumber: next }));
               }}
               type="text"
               inputMode="text"
-              autoCapitalize="characters"
-              placeholder="（例）582"
+              placeholder="（例）330 / 50A"
               style={{
                 width: "100%",
                 height: 44,
@@ -442,12 +610,10 @@ export default function PlateRegisterModal({
             />
           </Field>
 
-
           <Field label="ひらがな">
             <input
               value={v.kana}
               onChange={(e) => setV((p) => ({ ...p, kana: e.target.value }))}
-              list="kana-options"
               placeholder="（例）あ"
               style={{
                 width: "100%",
@@ -465,46 +631,15 @@ export default function PlateRegisterModal({
 
             <datalist id="kana-options">
               {[
-                "あ",
-                "い",
-                "う",
-                "え",
-                "お",
-                "か",
-                "き",
-                "く",
-                "け",
-                "こ",
-                "さ",
-                "す",
-                "せ",
-                "そ",
-                "た",
-                "て",
-                "と",
-                "な",
-                "に",
-                "ぬ",
-                "ね",
-                "の",
-                "は",
-                "ひ",
-                "ふ",
-                "へ",
-                "ほ",
-                "ま",
-                "み",
-                "む",
-                "め",
-                "も",
-                "や",
-                "ゆ",
-                "よ",
-                "ら",
-                "り",
-                "る",
-                "れ",
-                "ろ",
+                "あ", "い", "う", "え", "お",
+                "か", "き", "く", "け", "こ",
+                "さ", "す", "せ", "そ",
+                "た", "て", "と",
+                "な", "に", "ぬ", "ね", "の",
+                "は", "ひ", "ふ", "へ", "ほ",
+                "ま", "み", "む", "め", "も",
+                "や", "ゆ", "よ",
+                "ら", "り", "る", "れ", "ろ",
                 "わ",
               ].map((k) => (
                 <option key={k} value={k} />
@@ -555,11 +690,112 @@ export default function PlateRegisterModal({
 
         {dupMsg && <div style={{ marginTop: 12, fontSize: 13, color: "#b45309" }}>{dupMsg}</div>}
 
+        {/* ✅ 追加：画像選択（登録ボタンの前） */}
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 14, color: "#111827", marginBottom: 8 }}>画像（必須）</div>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              setPhotoFile(f);
+              setDupMsg("");
+            }}
+          />
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              style={{
+                height: 44,
+                padding: "0 14px",
+                borderRadius: 12,
+                border: "2px solid #e5e7eb",
+                background: "#fff",
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              📷 画像を選択
+            </button>
+
+            {photoFile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoFile(null);
+                  // input の同一ファイル再選択対策
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+                style={{
+                  height: 44,
+                  padding: "0 12px",
+                  borderRadius: 12,
+                  border: "2px solid #fee2e2",
+                  background: "#fff5f5",
+                  color: "#b91c1c",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+                aria-label="画像を外す"
+                title="画像を外す"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {photoPreview && (
+            <div
+              style={{
+                marginTop: 10,
+                borderRadius: 14,
+                border: "2px solid #e5e7eb",
+                overflow: "hidden",
+                background: "#fff",
+              }}
+            >
+              <img
+                src={photoPreview}
+                alt="選択画像プレビュー"
+                style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }}
+              />
+            </div>
+          )}
+
+          {!photoFile && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280" }}>
+              ※後から見返す用に、ナンバープレート写真を保存できます
+            </div>
+          )}
+          {tried && !photoFile && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "#b45309" }}>
+              画像は必須です。プレート写真を選択してください。
+            </div>
+          )}
+
+          <label style={{ display: "block", marginTop: 12 }}>
+            <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>撮影日</div>
+            <input
+              type="date"
+              value={v.capturedAt}
+              onChange={(e) => setV((v) => ({ ...v, capturedAt: e.target.value }))}
+              className="input"
+            />
+          </label>
+
+
+        </div>
+
         {/* 登録ボタン */}
         <div style={{ marginTop: 16 }}>
           <button
             onClick={submit}
-            disabled={!canSubmit || done}
+            disabled={!canSubmit || submitState !== "idle"}
             style={{
               width: "100%",
               height: 52,
@@ -568,101 +804,64 @@ export default function PlateRegisterModal({
               fontSize: 18,
               fontWeight: 900,
               color: "#fff",
-              background: canSubmit ? "#f97316" : "#c7c7c7",
-              boxShadow: canSubmit ? "0 6px 16px rgba(249,115,22,0.35)" : "none",
-              cursor: canSubmit ? "pointer" : "not-allowed",
-              opacity: done ? 0.7 : 1,
+              transition: "all 0.2s ease",
+              position: "relative",
+              overflow: "hidden",
+              background: canSubmit ? submitStyleMap[submitState].background : "#c7c7c7",
+              boxShadow: canSubmit ? submitStyleMap[submitState].boxShadow : "none",
+              cursor: canSubmit ? submitStyleMap[submitState].cursor : "not-allowed",
+              opacity: canSubmit ? 1 : 0.6,
+              ...submitStyleMap[submitState],
             }}
           >
-            登録
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+              {/* ✅ 完了のときだけ：チェックがポンっと出る */}
+              {submitState === "done" && (
+                <span
+                  aria-hidden
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.22)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    animation: "popIn 220ms ease-out",
+                  }}
+                >
+                  <span style={{ fontSize: 16, lineHeight: 1 }}>✓</span>
+                </span>
+              )}
+
+              {/* テキスト */}
+              <span>
+                {submitState === "idle"
+                  ? "登録"
+                  : submitState === "saving"
+                    ? "保存中…"
+                    : "完了"}
+              </span>
+            </span>
+
+            {/* ✅ 完了時にキラッとする演出（任意だけど気持ちいい） */}
+            {submitState === "done" && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "40%",
+                  height: "100%",
+                  background: "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0))",
+                  animation: "shine 500ms ease-out",
+                }}
+              />
+            )}
           </button>
         </div>
-
-        {/* 完了メッセージ */}
-        {done && (
-          <div
-            style={{
-              marginTop: 14,
-              padding: 12,
-              borderRadius: 14,
-              background: "#ecfdf5",
-              border: "1px solid #a7f3d0",
-              color: "#065f46",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <div style={{ fontWeight: 900 }}>
-              登録が完了しました
-              <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.9, marginTop: 2 }}>
-                {v.regionName} {v.classNumber} {v.kana} {serial}
-                {" / "}色: {colorLabel(v.color)}
-              </div>
-            </div>
-            <button
-              onClick={closeAll}
-              style={{
-                border: "none",
-                background: "#10b981",
-                color: "#fff",
-                borderRadius: 10,
-                padding: "8px 12px",
-                fontWeight: 900,
-                cursor: "pointer",
-              }}
-            >
-              閉じる
-            </button>
-          </div>
-        )}
       </div>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <div style={{ fontSize: 14, color: "#111827", marginBottom: 6 }}>{label}</div>
-      {children}
-    </div>
-  );
-}
-
-function Select({
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: Array<{ value: string; label: string }>;
-  placeholder: string;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        width: "100%",
-        height: 44,
-        borderRadius: 12,
-        border: "2px solid #e5e7eb",
-        padding: "0 12px",
-        fontSize: 16,
-        outline: "none",
-        background: "#fff",
-      }}
-    >
-      <option value="">{placeholder}</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
   );
 }

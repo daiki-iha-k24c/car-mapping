@@ -1,4 +1,6 @@
-export type PlateColor = "white" | "yellow" | "green" | "pink";
+import { isExcludedPrefecture } from "../lib/excludedPrefectures";
+
+export type PlateColor = "white" | "yellow" | "green" | "black";
 export type PlateStyle = "digital" | "illustration";
 
 export type Plate = {
@@ -10,6 +12,8 @@ export type Plate = {
   color: PlateColor;
   renderSvg: string;
   createdAt: string;
+  photo_url?: string | null;
+  capturedAt?: string | null;
 };
 
 const KEY_BASE = "plates_v1";
@@ -57,6 +61,12 @@ export function listPlatesByRegionId(userId: string, regionId: string): Plate[] 
 }
 
 export function addPlate(userId: string, plate: Plate) {
+  // ✅ 沖縄県は登録不可（ローカル側）
+  const pref = (plate.regionId ?? "").split(":")[0];
+  if (isExcludedPrefecture(pref)) {
+    throw new Error("沖縄県のナンバープレートは登録対象外です");
+  }
+
   const all = loadAll(userId);
   all.push(plate);
   saveAll(userId, all);
