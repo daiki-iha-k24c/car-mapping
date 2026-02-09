@@ -80,7 +80,7 @@ export default function SerialCollectionPage() {
     <div style={{ padding: 12 }}>
       <div className="header">
         <div>
-          <h2 style={{ margin: "8px 0" }}>4桁コレクション</h2>
+          <h2 style={{ margin: "8px 0" }}></h2>
         </div>
 
         <div className="header-actions">

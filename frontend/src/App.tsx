@@ -19,15 +19,19 @@ import WelcomeSplash from "./components/WelcomeSplash";
 import { useUser } from "./context/UserContext";
 import BootGate from "./components/BootGate";
 import { PlatePeekProvider } from "./context/PlatePeekContext";
+import WaveBackground from "./components/WaveBackground";
+import SceneBackground from "./components/SceneBackground";
 
 export default function App() {
   return (
     <UserProvider>
       <PlatePeekProvider>
-        <AppInner />
+        <SceneBackground />
+        <div className="app-root">
+          <AppInner />
+        </div>
       </PlatePeekProvider>
     </UserProvider>
-
   );
 }
 

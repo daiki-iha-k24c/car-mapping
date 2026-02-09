@@ -427,14 +427,14 @@ export default function HomePage() {
             width: "100%",
             height: 100,
             borderRadius: 14,
-            border: "10px inset #fff",
+            border: "8px solid #762f07",
             fontSize: 21,
             fontWeight: "bold",
             color: "#762f07",
-            background: "#946c45",
+            background: "#fff",
             boxShadow: "0 6px 16px #96514d",
             textShadow: "3px 1px 0 #fff1cf, -1px -1px 0 #fff1cf,-1px 1px 0 #fff1cf, 1px -1px 0 #fff1cf,0px 1px 0 #fff1cf, 0-1px 0 #fff1cf,-1px 0 0 #fff1cf, 1px 0 0 #fff1cf",
-
+            opacity:"0.1",
             
           }}
           onClick={() => setPlateOpen(true)}
@@ -447,3 +447,6 @@ export default function HomePage() {
     </div >
   );
 }
+/*
+
+*/ 

@@ -431,3 +431,174 @@ input {
   font-size: 13px;
   color: #b00020;
 }
+
+/* 背景レイヤー（クリック邪魔しない） */
+.wave-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(60deg, var(--bg-1) 0%, var(--bg-2) 100%);
+}
+
+/* 波は画面下に固定（必要なら top にもできる） */
+.wave-bg .waves{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 18vh;
+  min-height: 90px;
+  max-height: 160px;
+  margin-bottom: -7px; /* Safariの隙間対策（元ネタ） */
+}
+
+/* アニメ */
+.wave-bg .parallax > use{
+  animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;
+}
+.wave-bg .parallax > use:nth-child(1){ animation-delay:-2s; animation-duration:7s; }
+.wave-bg .parallax > use:nth-child(2){ animation-delay:-3s; animation-duration:10s; }
+.wave-bg .parallax > use:nth-child(3){ animation-delay:-4s; animation-duration:13s; }
+.wave-bg .parallax > use:nth-child(4){ animation-delay:-5s; animation-duration:20s; }
+
+@keyframes move-forever{
+  0%   { transform: translate3d(-90px,0,0); }
+  100% { transform: translate3d( 85px,0,0); }
+}
+
+/* アプリの本体は波の上に */
+.app-root{
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px){
+  .wave-bg .waves{
+    height: 60px;
+    min-height: 60px;
+  }
+}
+
+/* デフォルト（昼） */
+body{
+  --bg-1: #bfefff;
+  --bg-2: #fff3cf;
+
+  --wave-1: rgba(255,255,255,0.70);
+  --wave-2: rgba(255,255,255,0.50);
+  --wave-3: rgba(255,255,255,0.30);
+  --wave-4: rgba(255,255,255,1.00);
+}
+
+/* 朝 */
+body[data-theme="morning"]{
+  --bg-1: #cfefff;
+  --bg-2: #fff8dc;
+}
+
+/* 夕 */
+body[data-theme="evening"]{
+  --bg-1: #ffd1a6;
+  --bg-2: #ffb3c7;
+
+  /* 波を少し暖色寄りにしたいなら */
+  --wave-1: rgba(255,255,255,0.65);
+  --wave-2: rgba(255,255,255,0.48);
+  --wave-3: rgba(255,255,255,0.28);
+}
+
+/* 夜 */
+body[data-theme="night"]{
+  --bg-1: #0f172a;
+  --bg-2: #1e293b;
+
+  /* 夜は波をうっすら青白くすると綺麗 */
+  --wave-1: rgba(226,232,240,0.18);
+  --wave-2: rgba(226,232,240,0.12);
+  --wave-3: rgba(226,232,240,0.08);
+  --wave-4: rgba(226,232,240,0.06);
+}
+
+
+/* 背景レイヤー：クリックを邪魔しない */
+.scene-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 空（グラデ） */
+.scene-sky{
+  position:absolute;
+  inset:0;
+  background: linear-gradient(60deg, var(--bg-1) 0%, var(--bg-2) 100%);
+}
+
+/* レイヤー共通 */
+.scene-layer{
+  position:absolute;
+  left:0;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 各レイヤーの配置（上下） */
+.scene-clouds{ top: 6vh; height: 14vh; opacity: .85; }
+.scene-city{ bottom: 7vh; height: 22vh; }
+.scene-cars{ bottom: 2vh; height: 12vh; }
+
+/* “流れる帯” 2枚並べてループ */
+.scene-track{
+  display:flex;
+  width: 200%;
+  height: 100%;
+  animation: scene-move var(--dur, 25s) linear infinite;
+  transform: translate3d(0,0,0);
+}
+
+.scene-track .strip{
+  width: 50%;
+  height: 100%;
+}
+
+/* 速度差（パララックス） */
+.scene-clouds .scene-track{ --dur: 60s; }
+.scene-city .scene-track{ --dur: 35s; }
+.scene-cars .scene-track{ --dur: 18s; }
+
+@keyframes scene-move{
+  0% { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-50%,0,0); }
+}
+
+/* アプリ本体は前面に */
+.app-root{ position: relative; z-index: 1; }
+
+/* 時間帯テーマ（前と同じ方式） */
+body{
+  --bg-1:#bfefff; --bg-2:#fff3cf;
+  --cloud-color: rgba(255,255,255,0.9);
+  --city-color: rgba(90, 60, 45, 0.35);
+  --window-color: rgba(255,255,255,0.8);
+  --car-color: rgba(226, 4, 27, 0.55);
+  --tire-color: rgba(40,40,40,0.9);
+  --glass-color: rgba(200,230,255,0.9);
+}
+
+body[data-theme="evening"]{
+  --bg-1:#ffd1a6; --bg-2:#ffb3c7;
+  --city-color: rgba(90, 60, 45, 0.40);
+  --car-color: rgba(226, 4, 27, 0.60);
+}
+
+body[data-theme="night"]{
+  --bg-1:#0f172a; --bg-2:#1e293b;
+  --cloud-color: rgba(226,232,240,0.25);
+  --city-color: rgba(148,163,184,0.22);
+  --window-color: rgba(255,245,180,0.55);
+  --car-color: rgba(148,163,184,0.25);
+}

@@ -5,6 +5,7 @@ export default function AppFooter() {
   return (
     <footer
       style={{
+        //height:"100px",
         padding: "10px 12px",
         fontSize: 12,
         opacity: 0.8,
