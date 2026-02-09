@@ -260,7 +260,7 @@ export default function HomePage() {
     <div className="container">
       <div className="header">
         <div>
-          <h2 style={{ margin: 0 }}>𝑪𝒂𝒓_𝑴𝒂𝒑𝒑𝒊𝒏𝒈</h2>
+          <h2 style={{ margin: 0 }}>𝑪𝒂𝒓_𝑴𝒂𝒑𝒑𝒊𝒏aa</h2>
         </div>
 
         <div className="header-actions">
@@ -434,7 +434,6 @@ export default function HomePage() {
             background: "#fff",
             boxShadow: "0 6px 16px #96514d",
             textShadow: "3px 1px 0 #fff1cf, -1px -1px 0 #fff1cf,-1px 1px 0 #fff1cf, 1px -1px 0 #fff1cf,0px 1px 0 #fff1cf, 0-1px 0 #fff1cf,-1px 0 0 #fff1cf, 1px 0 0 #fff1cf",
-            opacity:"0.1",
             
           }}
           onClick={() => setPlateOpen(true)}

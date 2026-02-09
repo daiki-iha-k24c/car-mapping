@@ -1,12 +1,130 @@
 :root {
   --bg: #fff1cf;
-  --card: #fff1cf;
+  --card: rgba(0, 0, 0, 0.1); /* ← 0.75 が透け具合 */
   --text: #111827;
   --muted: #6b7280;
   --border: #e5e7eb;
   --accent: #00bcd4;
   --accent2: #0ea5e9;
 }
+
+
+/* 背景レイヤー：クリック邪魔しない */
+.scene-bg{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 空のグラデ（時間帯で変数を変える） */
+.scene-sky{
+  position:absolute;
+  inset:0;
+  background: linear-gradient(60deg, var(--bg-1) 0%, var(--bg-2) 100%);
+}
+
+/* レイヤー共通 */
+.scene-layer{
+  position:absolute;
+  left:0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.scene-clouds{ top: 6vh; height: 14vh; opacity: .85; }
+.scene-city{ bottom: 7vh; height: 22vh; }
+.scene-cars{ bottom: 2vh; height: 12vh; }
+
+/* 2枚並べてループ */
+.scene-track{
+  display:flex;
+  width: max-content;
+  height: 100%;
+  animation: scene-move var(--dur, 25s) linear infinite;
+  transform: translate3d(0,0,0);
+  will-change: transform;
+}
+
+/* 画像は高さにフィットさせて横に伸びる */
+.scene-strip{
+  height: 100%;
+  width: auto;
+  flex: 0 0 auto;
+  image-rendering: auto;
+}
+
+/* 速度差（パララックス） */
+.scene-clouds .scene-track{ --dur: 70s; }
+.scene-city .scene-track{ --dur: 40s; }
+.scene-cars .scene-track{ --dur: 18s; }
+
+@keyframes scene-move{
+  0%   { transform: translate3d(0,0,0); }
+  100% { transform: translate3d(-50%,0,0); }
+}
+
+/* アプリ本体は前面 */
+.app-root{ position: relative; z-index: 1; }
+
+/* 時間帯テーマ（背景色だけ変える） */
+body{
+  --bg-1:#bfefff;
+  --bg-2:#fff3cf;
+}
+
+body[data-theme="morning"]{
+  --bg-1:#cfefff;
+  --bg-2:#fff8dc;
+}
+
+body[data-theme="evening"]{
+  --bg-1:#ffd1a6;
+  --bg-2:#ffb3c7;
+}
+
+body[data-theme="night"]{
+  --bg-1:#0f172a;
+  --bg-2:#1e293b;
+}
+
+.mapCard{
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+/* ✅ 半透明の背景レイヤー */
+.mapCard .card-bg{
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 248, 220, 0.75); /* 今のベージュ */
+  backdrop-filter: blur(6px);           /* ガラス感 */
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 0;
+}
+
+/* 枠線（ギザギザ使ってるならここ） */
+.mapCard::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border: 5px solid #6b3f2a;
+  border-radius: 18px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 中身は完全不透明 */
+.mapCard .card-body{
+  position: relative;
+  z-index: 2;
+  padding: 16px;
+  color: #5a3a2a;
+}
+
+
 
 * {
   box-sizing: border-box;
@@ -15,8 +133,8 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  background: var(--bg);
-  color: var(--text);
+  /* background: var(--bg);
+  color: var(--text); */
 }
 
 a {
@@ -120,7 +238,7 @@ a {
 
 
 .card {
-  background: var(--card);
+  /* background: var(--card); */
   border: 5px solid #664032;
   border-radius: 14px;
   padding: 14px;
@@ -448,9 +566,9 @@ input {
   right: 0;
   bottom: 0;
   width: 100%;
-  height: 18vh;
+  height: 36vh;
   min-height: 90px;
-  max-height: 160px;
+  max-height: 320px;
   margin-bottom: -7px; /* Safariの隙間対策（元ネタ） */
 }
 
@@ -555,14 +673,14 @@ body[data-theme="night"]{
 .scene-track{
   display:flex;
   width: 200%;
-  height: 100%;
+  height: 200%;
   animation: scene-move var(--dur, 25s) linear infinite;
   transform: translate3d(0,0,0);
 }
 
 .scene-track .strip{
   width: 50%;
-  height: 100%;
+  height: 200%;
 }
 
 /* 速度差（パララックス） */
@@ -602,3 +720,5 @@ body[data-theme="night"]{
   --window-color: rgba(255,245,180,0.55);
   --car-color: rgba(148,163,184,0.25);
 }
+
+

@@ -21,12 +21,13 @@ import BootGate from "./components/BootGate";
 import { PlatePeekProvider } from "./context/PlatePeekContext";
 import WaveBackground from "./components/WaveBackground";
 import SceneBackground from "./components/SceneBackground";
+import SceneBackgroundPng from "./components/SceneBackgroundPng";
 
 export default function App() {
   return (
     <UserProvider>
       <PlatePeekProvider>
-        <SceneBackground />
+        <SceneBackgroundPng />
         <div className="app-root">
           <AppInner />
         </div>
