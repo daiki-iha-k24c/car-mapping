@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import WelcomeSplash from "./WelcomeSplash";
 
 export default function BootGate({
-  minimumMs = 4200,
+  minimumMs = 5000,
   ready,
   children,
 }: {
@@ -17,6 +18,19 @@ export default function BootGate({
     return () => window.clearTimeout(t);
   }, [minimumMs]);
 
-  if (!(minDone && ready)) return <WelcomeSplash totalMs={minimumMs} />;
-  return <>{children}</>;
+  const show = !(minDone && ready);
+
+  return (
+    <>
+      {children}
+
+      {show &&
+        createPortal(
+          <div className="splash-root">
+            <WelcomeSplash />
+          </div>,
+          document.body
+        )}
+    </>
+  );
 }
