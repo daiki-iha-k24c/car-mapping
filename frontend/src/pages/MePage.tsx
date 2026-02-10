@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { Link, useNavigate } from "react-router-dom";
+import type { ThemeMode } from "../lib/themePref";
+import { applyThemeFromPref, getThemePref, setThemePref } from "../lib/themePref";
 
 const AVATAR_BUCKET = "avatars";
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
 type Profile = { username: string; avatar_url: string | null };
+
+const OPTIONS: Array<{ key: ThemeMode; label: string; emoji: string }> = [
+  { key: "auto", label: "自動", emoji: "🕒" },
+  { key: "morning", label: "朝", emoji: "🌅" },
+  { key: "day", label: "昼", emoji: "☀️" },
+  { key: "evening", label: "夕", emoji: "🌇" },
+  { key: "night", label: "夜", emoji: "🌙" },
+];
 
 function validateUsername(s: string) {
   const v = s.trim();
@@ -66,6 +76,48 @@ async function uploadAvatarAndSaveProfile(userId: string, file: File) {
   return path;
 }
 
+export function ThemePicker() {
+  const [mode, setMode] = useState<ThemeMode>("auto");
+
+  useEffect(() => {
+    setMode(getThemePref());
+  }, []);
+
+  function choose(next: ThemeMode) {
+    setMode(next);
+    setThemePref(next);
+    applyThemeFromPref(); // 即反映
+  }
+
+  return (
+    <div className="card">
+      <div className="card-bg" />
+      <div className="card-body">
+        <div className="picker-title">テーマ</div>
+
+        <div className="segmented" role="tablist" aria-label="テーマ選択">
+          {OPTIONS.map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              role="tab"
+              aria-selected={mode === o.key}
+              className={`seg ${mode === o.key ? "active" : ""}`}
+              onClick={() => choose(o.key)}
+            >
+              <span className="seg-emoji">{o.emoji}</span>
+              <span className="seg-label">{o.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="small note">
+          ※「固定」にすると、時間帯に関係なくそのテーマになります
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function MePage() {
   const [loading, setLoading] = useState(true);
@@ -292,6 +344,8 @@ export default function MePage() {
       <div style={{ color: "#666", marginBottom: 16, fontSize: 13 }}>
         みんなの記録・ランキングで表示される名前です
       </div>
+
+      <ThemePicker/>
 
       {loading ? (
         <div>読み込み中...</div>

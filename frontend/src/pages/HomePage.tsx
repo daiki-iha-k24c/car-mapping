@@ -260,7 +260,7 @@ export default function HomePage() {
     <div className="container">
       <div className="header">
         <div>
-          <h2 style={{ margin: 0 }}>𝑪𝒂𝒓_𝑴𝒂𝒑𝒑𝒊𝒏aa</h2>
+          <h3 style={{ margin: 0 }}>𝙽𝚞𝚖𝚋𝚎𝚛-𝙲𝚘𝚕𝚕𝚎𝚌𝚝𝚒𝚘𝚗</h3>
         </div>
 
         <div className="header-actions">
@@ -274,7 +274,7 @@ export default function HomePage() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
+                gap: 6,
                 marginRight: 8,
                 background: "#ffffff",
                 padding: "8px",
@@ -422,20 +422,7 @@ export default function HomePage() {
 
       <div style={{ display: "flex", gap: 10, marginBottom: 12, paddingTop: 10 }}>
         <button
-          className="btn"
-          style={{
-            width: "100%",
-            height: 100,
-            borderRadius: 14,
-            border: "8px solid #762f07",
-            fontSize: 21,
-            fontWeight: "bold",
-            color: "#762f07",
-            background: "#fff",
-            boxShadow: "0 6px 16px #96514d",
-            textShadow: "3px 1px 0 #fff1cf, -1px -1px 0 #fff1cf,-1px 1px 0 #fff1cf, 1px -1px 0 #fff1cf,0px 1px 0 #fff1cf, 0-1px 0 #fff1cf,-1px 0 0 #fff1cf, 1px 0 0 #fff1cf",
-            
-          }}
+          className="cta-btn"
           onClick={() => setPlateOpen(true)}
           disabled={!userId} // ✅ userId確定前は押せない
           title={!userId ? "ログイン確認中..." : ""}

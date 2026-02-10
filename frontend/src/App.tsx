@@ -20,21 +20,42 @@ import { useUser } from "./context/UserContext";
 import BootGate from "./components/BootGate";
 import { PlatePeekProvider } from "./context/PlatePeekContext";
 import WaveBackground from "./components/WaveBackground";
-import SceneBackground from "./components/SceneBackground";
-import SceneBackgroundPng from "./components/SceneBackgroundPng";
+import { useEffect } from "react";
+import { applyThemeFromPref, getThemePref } from "./lib/themePref";
+
 
 export default function App() {
   return (
     <UserProvider>
       <PlatePeekProvider>
+
+        {/* 🌊 波アニメ背景（全ページ共通・最背面） */}
+        <WaveBackground />
+
+        {/* アプリ本体（波より前面） */}
+        <div className="app-root">
           <AppInner />
+        </div>
+
       </PlatePeekProvider>
     </UserProvider>
   );
 }
 
+
 function AppInner() {
   const { authChecking } = useUser();
+   useEffect(() => {
+    // 初回適用
+    applyThemeFromPref();
+
+    // autoの時だけ定期更新（1時間ごと）
+    const id = window.setInterval(() => {
+      if (getThemePref() === "auto") applyThemeFromPref();
+    }, 60 * 60 * 1000);
+
+    return () => clearInterval(id);
+  }, []);
 
   return (
 

@@ -1,92 +1,102 @@
-:root {
-  --bg: #fff1cf;
-  --card: rgba(0, 0, 0, 0.1); /* ← 0.75 が透け具合 */
+:root{
+  /* 背景（波のグラデと合わせる） */
+  --bg-1: #bfefff;
+  --bg-2: #fff3cf;
+
+  --header-border:black;
+
+  /* テキスト */
   --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --accent: #00bcd4;
-  --accent2: #0ea5e9;
+  --muted: rgba(17,24,39,0.65);
+
+  /* フレーム色（茶枠） */
+  --frame: gray;
+
+  /* ブランド（赤） */
+  --brand: #e2041b;
+  --brand-ink: #fff1cf;
+
+  /* サーフェス（カード/フッター等の“面”） */
+  --surface: rgba(255, 248, 220, 0.5);
+
+  /* ボタン（登録ボタン） */
+  --cta-bg: #ffffff;
+  --cta-text: #762f07;
+  --cta-border: #762f07;
+  --cta-shadow: 0 6px 16px rgba(150, 81, 77, 0.7);
+
+  /* サマリー */
+  --summary-bg: var(--brand);
+  --summary-border: var(--brand-ink);
+  --summary-cl: black;
+  --summary-val: black;
+
+  /* ヘッダー */
+  --header-bg: var(--brand);
+  --header-title-shadow: 3px 1px 0 var(--brand-ink),
+    -1px -1px 0 var(--brand-ink), -1px 1px 0 var(--brand-ink),
+    1px -1px 0 var(--brand-ink), 0px 1px 0 var(--brand-ink),
+    0 -1px 0 var(--brand-ink), -1px 0 0 var(--brand-ink),
+    1px 0 0 var(--brand-ink);
 }
 
 
-/* 背景レイヤー：クリック邪魔しない */
-.scene-bg{
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/* 空のグラデ（時間帯で変数を変える） */
-.scene-sky{
-  position:absolute;
-  inset:0;
-  background: linear-gradient(60deg, var(--bg-1) 0%, var(--bg-2) 100%);
-}
-
-/* レイヤー共通 */
-.scene-layer{
-  position:absolute;
-  left:0;
-  width: 100%;
-  overflow: hidden;
-}
-
-.scene-clouds{ top: 6vh; height: 14vh; opacity: .85; }
-.scene-city{ bottom: 7vh; height: 22vh; }
-.scene-cars{ bottom: 2vh; height: 12vh; }
-
-/* 2枚並べてループ */
-.scene-track{
-  display:flex;
-  width: max-content;
-  height: 100%;
-  animation: scene-move var(--dur, 25s) linear infinite;
-  transform: translate3d(0,0,0);
-  will-change: transform;
-}
-
-/* 画像は高さにフィットさせて横に伸びる */
-.scene-strip{
-  height: 100%;
-  width: auto;
-  flex: 0 0 auto;
-  image-rendering: auto;
-}
-
-/* 速度差（パララックス） */
-.scene-clouds .scene-track{ --dur: 70s; }
-.scene-city .scene-track{ --dur: 40s; }
-.scene-cars .scene-track{ --dur: 18s; }
-
-@keyframes scene-move{
-  0%   { transform: translate3d(0,0,0); }
-  100% { transform: translate3d(-50%,0,0); }
-}
-
-/* アプリ本体は前面 */
-.app-root{ position: relative; z-index: 1; }
-
-/* 時間帯テーマ（背景色だけ変える） */
-body{
-  --bg-1:#bfefff;
-  --bg-2:#fff3cf;
-}
-
+/* 朝 */
 body[data-theme="morning"]{
-  --bg-1:#cfefff;
-  --bg-2:#fff8dc;
+  --bg-1: #bfefff;
+  --bg-2: #fff3cf;
+
+  --brand:#ed6d35;
+
+  --header-bg:rgba(255, 0255, 255, 0.7);
+  --header-border:#ffbf4f;
+
+  --frame:#ffbf4f;
+
+  --summary-cl: black;
+  --summary-val: #00afcc;
+  --summary-bg: rgba(255, 0255, 255, 0.8);;
+  --summary-border: #ffbf4f;
+
+  --cta-shadow: 7px 6px 5px rgba(0,0,0,0.12);
+  --cta-bg: linear-gradient(#ffffff, #f7ba5da8);
+  --cta-text: #ea5506;
+  --cta-border: #ffbf4f;
 }
 
+/* 夕 */
 body[data-theme="evening"]{
   --bg-1:#ffd1a6;
   --bg-2:#ffb3c7;
+
+  --brand:#cc1025;
+  --surface: rgba(255, 250, 240, 0.68);
 }
 
+/* 夜（雰囲気変える） */
 body[data-theme="night"]{
   --bg-1:#0f172a;
   --bg-2:#1e293b;
+
+  --text: rgba(248,250,252,0.92);
+  --muted: rgba(248,250,252,0.60);
+
+  --brand:#9b1121;              /* 夜は赤を少し落とす */
+  --brand-ink: rgba(255,241,207,0.95);
+
+  --frame: rgba(226,232,240,0.28);
+  --surface: rgba(255,255,255,0.10);
+
+  --cta-bg: rgba(255,255,255,0.10);
+  --cta-text: rgba(248,250,252,0.92);
+  --cta-border: rgba(226,232,240,0.35);
+  --cta-shadow: 0 12px 30px rgba(0,0,0,0.45);
+
+  --summary-bg: rgba(255,255,255,0.08);
+  --summary-border: rgba(226,232,240,0.30);
+
+  --header-bg: rgba(255,255,255,0.06);
+  --header-title-shadow: none;
 }
 
 .mapCard{
@@ -110,7 +120,7 @@ body[data-theme="night"]{
   content:"";
   position:absolute;
   inset:0;
-  border: 5px solid #6b3f2a;
+  border: 5px solid var(--frame);
   border-radius: 18px;
   pointer-events: none;
   z-index: 1;
@@ -133,8 +143,8 @@ body[data-theme="night"]{
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  /* background: var(--bg);
-  color: var(--text); */
+  /* background: var(--bg);*/
+  color: var(--text); 
 }
 
 a {
@@ -160,18 +170,13 @@ a {
   /* baselineは崩れやすいのでcenter推奨 */
   justify-content: space-between;
   margin-bottom: 12px;
-  background: #e2041b;
-  color: #e2041b;
-  text-shadow: 3px 1px 0 #fff1cf, -1px -1px 0 #fff1cf,
-    -1px 1px 0 #fff1cf, 1px -1px 0 #fff1cf,
-    0px 1px 0 #fff1cf, 0-1px 0 #fff1cf,
-    -1px 0 0 #fff1cf, 1px 0 0 #fff1cf;
+  background: var(--header-bg);
+  color: var(--brand);
+  text-shadow: var(--header-title-shadow);
   padding: 12px 16px;
   flex-wrap: nowrap;
-  --mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50%/4vmin 100%;
-  /* -webkit-mask: var(--mask);
-  mask: var(--mask); */
-  /* ✅ 絶対折り返さない */
+  border :5px solid var(--header-border);
+  border-radius: 8px;
 }
 
 /* 左側タイトルブロックは縮められるように */
@@ -233,16 +238,6 @@ a {
 
 .menu-item:hover {
   background: #f3f4f6;
-}
-
-
-
-.card {
-  /* background: var(--card); */
-  border: 5px solid #664032;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .stack {
@@ -496,9 +491,9 @@ input {
 .summaryBar {
   margin: 12px 0 14px;
   padding: 9px 14px;
-  border: 8px double #fff1cf;
+  border: 8px solid var(--summary-border);
   border-radius: 12px;
-  background: #e2041b;
+  background: var(--summary-bg);
   display: flex;
   gap: 14px;
   align-items: center;
@@ -513,7 +508,7 @@ input {
   font-size: 13px;
   font-weight: 600;
   opacity: 2;
-  color: #fff1cf;
+  color: var(--summary-cl);
   margin-bottom: 6px;
 }
 
@@ -521,7 +516,7 @@ input {
   font-size: 18px;
   font-weight: 900;
   line-height: 1.1;
-  color: #fff1cf;
+  color: var(--summary-val);
   
 }
 
@@ -566,10 +561,10 @@ input {
   right: 0;
   bottom: 0;
   width: 100%;
-  height: 36vh;
-  min-height: 90px;
-  max-height: 320px;
-  margin-bottom: -7px; /* Safariの隙間対策（元ネタ） */
+  height: 30vh;
+  min-height: 150px;
+  max-height: 300px;
+  margin-bottom: -8px; /* Safariの隙間対策（元ネタ） */
 }
 
 /* アニメ */
@@ -594,8 +589,8 @@ input {
 
 @media (max-width: 768px){
   .wave-bg .waves{
-    height: 60px;
-    min-height: 60px;
+    height: 200px;
+    min-height: 100px;
   }
 }
 
@@ -612,8 +607,8 @@ body{
 
 /* 朝 */
 body[data-theme="morning"]{
-  --bg-1: #cfefff;
-  --bg-2: #fff8dc;
+  --bg-1: #fde985;
+  --bg-2: #ff7e7e;
 }
 
 /* 夕 */
@@ -639,86 +634,99 @@ body[data-theme="night"]{
   --wave-4: rgba(226,232,240,0.06);
 }
 
-
-/* 背景レイヤー：クリックを邪魔しない */
-.scene-bg{
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-/* 空（グラデ） */
-.scene-sky{
-  position:absolute;
-  inset:0;
-  background: linear-gradient(60deg, var(--bg-1) 0%, var(--bg-2) 100%);
-}
-
-/* レイヤー共通 */
-.scene-layer{
-  position:absolute;
-  left:0;
+.cta-btn{
   width: 100%;
-  overflow: hidden;
+  height: 100px;
+  border-radius: 14px;
+
+  border: 8px solid var(--cta-border);
+  font-size: 21px;
+  font-weight: 900;
+
+  color: var(--cta-text);
+  background: var(--cta-bg);
+  box-shadow: var(--cta-shadow);
+
+  /* 文字縁どり（昼/夕/朝は今の雰囲気、夜は消したいなら上の変数でnoneにできる） */
+  text-shadow: 3px 1px 0 var(--brand-ink),
+    -1px -1px 0 var(--brand-ink), -1px 1px 0 var(--brand-ink),
+    1px -1px 0 var(--brand-ink), 0px 1px 0 var(--brand-ink),
+    0 -1px 0 var(--brand-ink), -1px 0 0 var(--brand-ink),
+    1px 0 0 var(--brand-ink);
 }
 
-/* 各レイヤーの配置（上下） */
-.scene-clouds{ top: 6vh; height: 14vh; opacity: .85; }
-.scene-city{ bottom: 7vh; height: 22vh; }
-.scene-cars{ bottom: 2vh; height: 12vh; }
-
-/* “流れる帯” 2枚並べてループ */
-.scene-track{
-  display:flex;
-  width: 200%;
-  height: 200%;
-  animation: scene-move var(--dur, 25s) linear infinite;
-  transform: translate3d(0,0,0);
+/* タイトル */
+.picker-title{
+  font-weight: 900;
+  margin-bottom: 10px;
 }
 
-.scene-track .strip{
-  width: 50%;
-  height: 200%;
+/* セグメント全体 */
+.segmented{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  background: rgba(0,0,0,0.06);
+  padding: 6px;
+  border-radius: 14px;
 }
 
-/* 速度差（パララックス） */
-.scene-clouds .scene-track{ --dur: 60s; }
-.scene-city .scene-track{ --dur: 35s; }
-.scene-cars .scene-track{ --dur: 18s; }
+/* 各セグメント */
+.seg{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 
-@keyframes scene-move{
-  0% { transform: translate3d(0,0,0); }
-  100% { transform: translate3d(-50%,0,0); }
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+
+  background: rgba(255,255,255,0.55);
+  color: var(--text);
+
+  font-weight: 800;
+  cursor: pointer;
+
+  transition: transform .08s ease, box-shadow .08s ease, background .15s ease;
 }
 
-/* アプリ本体は前面に */
-.app-root{ position: relative; z-index: 1; }
-
-/* 時間帯テーマ（前と同じ方式） */
-body{
-  --bg-1:#bfefff; --bg-2:#fff3cf;
-  --cloud-color: rgba(255,255,255,0.9);
-  --city-color: rgba(90, 60, 45, 0.35);
-  --window-color: rgba(255,255,255,0.8);
-  --car-color: rgba(226, 4, 27, 0.55);
-  --tire-color: rgba(40,40,40,0.9);
-  --glass-color: rgba(200,230,255,0.9);
+.seg:hover{
+  transform: translateY(-1px);
 }
 
-body[data-theme="evening"]{
-  --bg-1:#ffd1a6; --bg-2:#ffb3c7;
-  --city-color: rgba(90, 60, 45, 0.40);
-  --car-color: rgba(226, 4, 27, 0.60);
+.seg-emoji{
+  font-size: 18px;
 }
 
-body[data-theme="night"]{
-  --bg-1:#0f172a; --bg-2:#1e293b;
-  --cloud-color: rgba(226,232,240,0.25);
-  --city-color: rgba(148,163,184,0.22);
-  --window-color: rgba(255,245,180,0.55);
-  --car-color: rgba(148,163,184,0.25);
+.seg-label{
+  font-size: 13px;
 }
 
+/* 選択中 */
+.seg.active{
+  background: var(--cta-bg);
+  color: var(--cta-text);
+  border-color: var(--cta-border);
+  box-shadow: var(--cta-shadow);
+}
 
+/* 夜テーマ用の調整 */
+body[data-theme="night"] .segmented{
+  background: rgba(255,255,255,0.08);
+}
+
+body[data-theme="night"] .seg{
+  background: rgba(255,255,255,0.10);
+}
+
+body[data-theme="night"] .seg.active{
+  background: rgba(255,255,255,0.14);
+  color: var(--text);
+}
+
+/* 注釈 */
+.note{
+  margin-top: 8px;
+  color: var(--muted);
+}

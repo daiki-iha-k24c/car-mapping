@@ -52,7 +52,7 @@ export default function JapanMap({
       const status: PrefStatus = prog?.status ?? "none";
 
       el.style.fill = fillByStatus(status);
-      el.style.stroke = "#762f07";
+      el.style.stroke = "gray";
       el.style.strokeWidth = "1.5";
       el.style.cursor = "pointer";
 
@@ -68,15 +68,13 @@ export default function JapanMap({
       <div className="card-body">
         {/* タイトル */}
         <div className="card-header">
-          <h3>日本地図</h3>
-          <span>都道府県タップで地域マップ</span>
         </div>
 
         <div ref={containerRef} style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: svgText }} />
 
         {/* 凡例 */}
         <div className="legend">
-          色：未記録 / 一部 / 完全（3段階）
+          {/* 色：未記録 / 一部 / 完全（3段階） */}
         </div>
       </div>
     </div>
