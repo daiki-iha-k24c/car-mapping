@@ -1,13 +1,18 @@
-:root{
+:root {
   /* 背景（波のグラデと合わせる） */
   --bg-1: #bfefff;
   --bg-2: #fff3cf;
 
-  --header-border:black;
+  --header-border: black;
 
   /* テキスト */
   --text: #111827;
-  --muted: rgba(17,24,39,0.65);
+  --muted: rgba(17, 24, 39, 0.65);
+
+  /* 日本地図カード */
+  --card-bg: rgba(255, 255, 255, 0.0);
+  --card-border: rgba(255, 255, 255, 0.22);
+  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 
   /* フレーム色（茶枠） */
   --frame: gray;
@@ -42,96 +47,102 @@
 
 
 /* 朝 */
-body[data-theme="morning"]{
+body[data-theme="morning"] {
   --bg-1: #bfefff;
   --bg-2: #fff3cf;
 
-  --brand:#ed6d35;
+  --card-bg: rgba(255, 255, 255, 0.0);
+  --card-border: rgba(255, 255, 255, 0.22);
+  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 
-  --header-bg:rgba(255, 0255, 255, 0.7);
-  --header-border:#ffbf4f;
+  --brand: #ed6d35;
 
-  --frame:#ffbf4f;
+  --header-bg: rgba(255, 0255, 255, 0.7);
+  --header-border: #ffbf4f;
+
+  --frame: #ffbf4f;
 
   --summary-cl: black;
   --summary-val: #00afcc;
-  --summary-bg: rgba(255, 0255, 255, 0.8);;
+  --summary-bg: rgba(255, 0255, 255, 0.8);
+  ;
   --summary-border: #ffbf4f;
 
-  --cta-shadow: 7px 6px 5px rgba(0,0,0,0.12);
+  --cta-shadow: 7px 6px 5px rgba(0, 0, 0, 0.12);
   --cta-bg: linear-gradient(#ffffff, #f7ba5da8);
   --cta-text: #ea5506;
   --cta-border: #ffbf4f;
 }
 
 /* 夕 */
-body[data-theme="evening"]{
-  --bg-1:#ffd1a6;
-  --bg-2:#ffb3c7;
+body[data-theme="evening"] {
+  --bg-1: #ffd1a6;
+  --bg-2: #ffb3c7;
 
-  --brand:#cc1025;
+  --card-bg: rgba(255, 255, 255, 0.0);
+  --card-border: rgba(255, 255, 255, 0.22);
+  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+
+  --brand: #cc1025;
   --surface: rgba(255, 250, 240, 0.68);
 }
 
 /* 夜（雰囲気変える） */
-body[data-theme="night"]{
-  --bg-1:#0f172a;
-  --bg-2:#1e293b;
+body[data-theme="night"] {
+  --bg-1: #0f172a;
+  --bg-2: #1e293b;
 
-  --text: rgba(248,250,252,0.92);
-  --muted: rgba(248,250,252,0.60);
+  --text: black;
+  --muted: rgba(248, 250, 252, 0.60);
 
-  --brand:#9b1121;              /* 夜は赤を少し落とす */
-  --brand-ink: rgba(255,241,207,0.95);
+  --card-bg: rgba(255, 255, 255, 0.0);
+  --card-border: rgba(255, 255, 255, 0.22);
+  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 
-  --frame: rgba(226,232,240,0.28);
-  --surface: rgba(255,255,255,0.10);
+  --brand: #9b1121;
+  /* 夜は赤を少し落とす */
+  --brand-ink: black;
 
-  --cta-bg: rgba(255,255,255,0.10);
-  --cta-text: rgba(248,250,252,0.92);
-  --cta-border: rgba(226,232,240,0.35);
-  --cta-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  --frame: rgba(226, 232, 240, 0.28);
+  --surface: rgba(255, 255, 255, 0.10);
 
-  --summary-bg: rgba(255,255,255,0.08);
-  --summary-border: rgba(226,232,240,0.30);
+  --cta-bg: rgba(255, 255, 255, 0.10);
+  --cta-text: rgba(248, 250, 252, 0.92);
+  --cta-border: rgba(226, 232, 240, 0.35);
+  --cta-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 
-  --header-bg: rgba(255,255,255,0.06);
+  --summary-bg: rgba(255, 255, 255, 0.08);
+  --summary-border: rgba(226, 232, 240, 0.30);
+
+  --header-bg: rgba(255, 255, 255, 0.06);
   --header-title-shadow: none;
 }
 
-.mapCard{
+.mapCard {
   position: relative;
   border-radius: 18px;
   overflow: hidden;
 }
 
 /* ✅ 半透明の背景レイヤー */
-.mapCard .card-bg{
+.mapCard .card-bg {
   position: absolute;
   inset: 0;
-  background: rgba(255, 248, 220, 0.75); /* 今のベージュ */
-  backdrop-filter: blur(6px);           /* ガラス感 */
+  background: var(--card-bg);
+  /* 今のベージュ */
+  backdrop-filter: blur(6px);
+  /* ガラス感 */
   -webkit-backdrop-filter: blur(6px);
   z-index: 0;
 }
 
-/* 枠線（ギザギザ使ってるならここ） */
-.mapCard::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  border: 5px solid var(--frame);
-  border-radius: 18px;
-  pointer-events: none;
-  z-index: 1;
-}
-
 /* 中身は完全不透明 */
-.mapCard .card-body{
+.mapCard .card-body {
   position: relative;
   z-index: 2;
   padding: 16px;
   color: #5a3a2a;
+  background: var(--card-bg);
 }
 
 
@@ -144,7 +155,7 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   /* background: var(--bg);*/
-  color: var(--text); 
+  color: var(--text);
 }
 
 a {
@@ -175,7 +186,7 @@ a {
   text-shadow: var(--header-title-shadow);
   padding: 12px 16px;
   flex-wrap: nowrap;
-  border :5px solid var(--header-border);
+  border: 5px solid var(--header-border);
   border-radius: 8px;
 }
 
@@ -517,7 +528,7 @@ input {
   font-weight: 900;
   line-height: 1.1;
   color: var(--summary-val);
-  
+
 }
 
 .summarySub {
@@ -546,7 +557,7 @@ input {
 }
 
 /* 背景レイヤー（クリック邪魔しない） */
-.wave-bg{
+.wave-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -555,7 +566,7 @@ input {
 }
 
 /* 波は画面下に固定（必要なら top にもできる） */
-.wave-bg .waves{
+.wave-bg .waves {
   position: absolute;
   left: 0;
   right: 0;
@@ -564,77 +575,253 @@ input {
   height: 30vh;
   min-height: 150px;
   max-height: 300px;
-  margin-bottom: -8px; /* Safariの隙間対策（元ネタ） */
+  margin-bottom: -8px;
+  /* Safariの隙間対策（元ネタ） */
 }
 
 /* アニメ */
-.wave-bg .parallax > use{
-  animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;
+.wave-bg .parallax>use {
+  animation: move-forever 25s cubic-bezier(.55, .5, .45, .5) infinite;
 }
-.wave-bg .parallax > use:nth-child(1){ animation-delay:-2s; animation-duration:7s; }
-.wave-bg .parallax > use:nth-child(2){ animation-delay:-3s; animation-duration:10s; }
-.wave-bg .parallax > use:nth-child(3){ animation-delay:-4s; animation-duration:13s; }
-.wave-bg .parallax > use:nth-child(4){ animation-delay:-5s; animation-duration:20s; }
 
-@keyframes move-forever{
-  0%   { transform: translate3d(-90px,0,0); }
-  100% { transform: translate3d( 85px,0,0); }
+.wave-bg .parallax>use:nth-child(1) {
+  animation-delay: -2s;
+  animation-duration: 7s;
 }
+
+.wave-bg .parallax>use:nth-child(2) {
+  animation-delay: -3s;
+  animation-duration: 10s;
+}
+
+.wave-bg .parallax>use:nth-child(3) {
+  animation-delay: -4s;
+  animation-duration: 13s;
+}
+
+.wave-bg .parallax>use:nth-child(4) {
+  animation-delay: -5s;
+  animation-duration: 20s;
+}
+
+@keyframes move-forever {
+  0% {
+    transform: translate3d(-90px, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(85px, 0, 0);
+  }
+}
+
+
+/* 朝日：波線の上から出てくる */
+.bg-sunrise {
+  position: absolute;
+  right: 6%;
+  bottom: 10%;
+  /* ← waves の高さに合わせて調整 */
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      #ffea00 50%,
+      rgba(255, 170, 80, 0.0) 70%);
+  animation: sunriseGlow 4.5s ease-in-out infinite;
+}
+
+/* 昼の太陽 */
+.bg-sun {
+  position: absolute;
+  right: 10%;
+  top: 18%;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      #fff352 50%,
+      rgba(255, 170, 80, 0.0) 70%);
+  animation: sunriseGlow 4.5s ease-in-out infinite;
+}
+
+.bg-evening-sun {
+  position: absolute;
+  right: 6%;
+  bottom: 8%;
+  /* ← waves の高さに合わせて調整 */
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      #ea553a 50%,
+      rgba(255, 170, 80, 0.0) 70%);
+  animation: sunriseGlow 4.5s ease-in-out infinite;
+}
+
+/* 夜の月 */
+.bg-moon {
+  position: absolute;
+  left: 10%;
+  top: 10%;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      #fff 0%,
+      #cfd8ff 45%,
+      rgba(207, 216, 255, 0) 70%);
+}
+
+/* 流れ星：1本の斜め線（尾がグラデ） */
+.shooting-star {
+  position: absolute;
+  width: 220px;
+  /* 線の長さ */
+  height: 0.8px;
+  /* 線の太さ */
+  border-radius: 999px;
+  pointer-events: none;
+
+  /* 白線っぽい尾：左が薄く、右が明るい */
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.85),
+      rgba(255, 255, 255, 1));
+
+  /* 斜めにする */
+  transform: rotate(-25deg);
+  opacity: 0;
+
+  /* ほんの少しだけ柔らかく */
+  filter: blur(0.2px);
+}
+
+/* 画面外から入って、斜めに走って消える */
+@keyframes shootingStarRun {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-25deg);
+    opacity: 0;
+  }
+
+  6% {
+    opacity: 1;
+  }
+
+  18% {
+    opacity: 0.9;
+  }
+
+  26% {
+    opacity: 0;
+  }
+
+  100% {
+    transform: translate3d(-130vw, 55vh, 0) rotate(-25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes shootingStarRun {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-25deg);
+    opacity: 0;
+  }
+
+  7% {
+    opacity: 1;
+  }
+
+  18% {
+    opacity: 0.95;
+  }
+
+  26% {
+    opacity: 0;
+  }
+
+  100% {
+    transform: translate3d(-140vw, 60vh, 0) rotate(-25deg);
+    opacity: 0;
+  }
+}
+
+
+/* 3本（開始位置と周期をずらす） */
+.shooting-star.s1 {
+  right: 10px;
+  top: 12%;
+  animation: shootingStarRun 7.2s cubic-bezier(.2, .9, .2, 1) infinite;
+}
+
+.shooting-star.s2 {
+  right: -10px;
+  top: 26%;
+  animation: shootingStarRun 5.0s cubic-bezier(.2, .9, .2, 1) infinite;
+  animation-delay: 1.6s;
+}
+
+.shooting-star.s3 {
+  right: 0px;
+  top: 40%;
+  animation: shootingStarRun 3.4s cubic-bezier(.2, .9, .2, 1) infinite;
+  animation-delay: 3.2s;
+}
+
 
 /* アプリの本体は波の上に */
-.app-root{
+.app-root {
   position: relative;
   z-index: 1;
 }
 
-@media (max-width: 768px){
-  .wave-bg .waves{
+@media (max-width: 768px) {
+  .wave-bg .waves {
     height: 200px;
     min-height: 100px;
   }
 }
 
 /* デフォルト（昼） */
-body{
+body {
   --bg-1: #bfefff;
   --bg-2: #fff3cf;
 
-  --wave-1: rgba(255,255,255,0.70);
-  --wave-2: rgba(255,255,255,0.50);
-  --wave-3: rgba(255,255,255,0.30);
-  --wave-4: rgba(255,255,255,1.00);
+  --wave-1: rgba(255, 255, 255, 0.70);
+  --wave-2: rgba(255, 255, 255, 0.50);
+  --wave-3: rgba(255, 255, 255, 0.30);
+  --wave-4: rgba(255, 255, 255, 1.00);
 }
 
 /* 朝 */
-body[data-theme="morning"]{
-  --bg-1: #fde985;
-  --bg-2: #ff7e7e;
+body[data-theme="morning"] {
+  --bg-1: #ffff7f;
+  --bg-2: #b7ffff;
 }
 
 /* 夕 */
-body[data-theme="evening"]{
-  --bg-1: #ffd1a6;
-  --bg-2: #ffb3c7;
+body[data-theme="evening"] {
+  --bg-1: #ec6d71;
+  --bg-2: #a59aca;
 
   /* 波を少し暖色寄りにしたいなら */
-  --wave-1: rgba(255,255,255,0.65);
-  --wave-2: rgba(255,255,255,0.48);
-  --wave-3: rgba(255,255,255,0.28);
+  --wave-1: rgba(255, 255, 255, 0.65);
+  --wave-2: rgba(255, 255, 255, 0.48);
+  --wave-3: rgba(255, 255, 255, 0.28);
 }
 
 /* 夜 */
-body[data-theme="night"]{
+body[data-theme="night"] {
   --bg-1: #0f172a;
   --bg-2: #1e293b;
 
   /* 夜は波をうっすら青白くすると綺麗 */
-  --wave-1: rgba(226,232,240,0.18);
-  --wave-2: rgba(226,232,240,0.12);
-  --wave-3: rgba(226,232,240,0.08);
-  --wave-4: rgba(226,232,240,0.06);
+  --wave-1: rgba(226, 232, 240, 0.18);
+  --wave-2: rgba(226, 232, 240, 0.12);
+  --wave-3: rgba(226, 232, 240, 0.08);
+  --wave-4: rgba(226, 232, 240, 0.06);
 }
 
-.cta-btn{
+.cta-btn {
   width: 100%;
   height: 100px;
   border-radius: 14px;
@@ -656,23 +843,23 @@ body[data-theme="night"]{
 }
 
 /* タイトル */
-.picker-title{
+.picker-title {
   font-weight: 900;
   margin-bottom: 10px;
 }
 
 /* セグメント全体 */
-.segmented{
+.segmented {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;
-  background: rgba(0,0,0,0.06);
+  background: rgba(0, 0, 0, 0.06);
   padding: 6px;
   border-radius: 14px;
 }
 
 /* 各セグメント */
-.seg{
+.seg {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -682,7 +869,7 @@ body[data-theme="night"]{
   border-radius: 10px;
   border: 1px solid transparent;
 
-  background: rgba(255,255,255,0.55);
+  background: rgba(255, 255, 255, 0.55);
   color: var(--text);
 
   font-weight: 800;
@@ -691,20 +878,20 @@ body[data-theme="night"]{
   transition: transform .08s ease, box-shadow .08s ease, background .15s ease;
 }
 
-.seg:hover{
+.seg:hover {
   transform: translateY(-1px);
 }
 
-.seg-emoji{
+.seg-emoji {
   font-size: 18px;
 }
 
-.seg-label{
+.seg-label {
   font-size: 13px;
 }
 
 /* 選択中 */
-.seg.active{
+.seg.active {
   background: var(--cta-bg);
   color: var(--cta-text);
   border-color: var(--cta-border);
@@ -712,29 +899,31 @@ body[data-theme="night"]{
 }
 
 /* 夜テーマ用の調整 */
-body[data-theme="night"] .segmented{
-  background: rgba(255,255,255,0.08);
+body[data-theme="night"] .segmented {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-body[data-theme="night"] .seg{
-  background: rgba(255,255,255,0.10);
+body[data-theme="night"] .seg {
+  background: rgba(255, 255, 255, 0.10);
 }
 
-body[data-theme="night"] .seg.active{
-  background: rgba(255,255,255,0.14);
+body[data-theme="night"] .seg.active {
+  background: rgba(255, 255, 255, 0.14);
   color: var(--text);
 }
 
 /* 注釈 */
-.note{
+.note {
   margin-top: 8px;
   color: var(--muted);
 }
 
-.splash-root{
+.splash-root {
   position: fixed;
   inset: 0;
-  z-index: 2147483647; /* 最強 */
+  z-index: 2147483647;
+  /* 最強 */
   pointer-events: auto;
-  background: #fff;    /* 完全に覆う */
+  background: #fff;
+  /* 完全に覆う */
 }
