@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import SerialCollectionGrid, { type SerialRow } from "../components/SerialCollectionGrid";
 
+
 const TOTAL = 9999;
 
 type ProfileMini = { user_id: string; username: string | null };
@@ -72,6 +73,8 @@ export default function GlobalSerialCollectionPage() {
   }, []);
 
   const achieved = rows.length;
+  const rate = achieved / TOTAL;
+  const ratePct = (rate * 100).toFixed(2); // 例: "0.0" "12.3"
 
   const pickedUsername = useMemo(() => {
     if (!picked?.row.first_user_id) return null;
@@ -93,11 +96,25 @@ export default function GlobalSerialCollectionPage() {
           <Link to="/" className="btn">ホームに戻る</Link>
         </div>
       </div>
+      <div className="summaryBar">
+        <>
+          <div className="summaryItem">
+            <div className="summaryLabel">達成数</div>
+            <div className="summaryValue">
+              {achieved} / {TOTAL}
+            </div>
+          </div>
 
-      <div style={{ marginBottom: 12, opacity: 0.75 }}>
-        達成 {achieved} / {TOTAL}
+          <div className="summaryDivider" />
+
+          <div className="summaryItem">
+            <div className="summaryLabel">達成数</div>
+            <div className="summaryValue">
+              {ratePct}%
+            </div>
+          </div>
+        </>
       </div>
-
       <SerialCollectionGrid
         rows={rows}
         onPick={(serial4, row) => {
