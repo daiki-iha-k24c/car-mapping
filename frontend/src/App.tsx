@@ -27,10 +27,7 @@ export default function App() {
   return (
     <UserProvider>
       <PlatePeekProvider>
-        <SceneBackgroundPng />
-        <div className="app-root">
           <AppInner />
-        </div>
       </PlatePeekProvider>
     </UserProvider>
   );
