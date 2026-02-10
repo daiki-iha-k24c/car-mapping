@@ -346,7 +346,15 @@ export default function HomePage() {
                   className="menu-item"
                   onClick={() => setMenuOpen(false)}
                 >
-                  🗾ナンバーコレクション
+                  🗾ナンバーコレクション(個人)
+                </Link>
+
+                <Link
+                  to="/serial-collection/global"
+                  className="menu-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  🌐 ナンバーコレクション(みんな)
                 </Link>
 
                 <Link

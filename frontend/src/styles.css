@@ -31,7 +31,7 @@
   --cta-shadow: 0 6px 16px rgba(150, 81, 77, 0.7);
 
   /* サマリー */
-  --summary-bg: var(--brand);
+  --summary-bg: rgba(255, 255, 255, 0.08);
   --summary-border: var(--brand-ink);
   --summary-cl: black;
   --summary-val: black;
@@ -51,10 +51,6 @@ body[data-theme="morning"] {
   --bg-1: #bfefff;
   --bg-2: #fff3cf;
 
-  --card-bg: rgba(255, 255, 255, 0.0);
-  --card-border: rgba(255, 255, 255, 0.22);
-  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-
   --brand: #ed6d35;
 
   --header-bg: rgba(255, 0255, 255, 0.7);
@@ -64,8 +60,6 @@ body[data-theme="morning"] {
 
   --summary-cl: black;
   --summary-val: #00afcc;
-  --summary-bg: rgba(255, 0255, 255, 0.8);
-  ;
   --summary-border: #ffbf4f;
 
   --cta-shadow: 7px 6px 5px rgba(0, 0, 0, 0.12);
@@ -76,13 +70,6 @@ body[data-theme="morning"] {
 
 /* 夕 */
 body[data-theme="evening"] {
-  --bg-1: #ffd1a6;
-  --bg-2: #ffb3c7;
-
-  --card-bg: rgba(255, 255, 255, 0.0);
-  --card-border: rgba(255, 255, 255, 0.22);
-  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-
   --brand: #cc1025;
   --surface: rgba(255, 250, 240, 0.68);
 }
@@ -95,13 +82,10 @@ body[data-theme="night"] {
   --text: black;
   --muted: rgba(248, 250, 252, 0.60);
 
-  --card-bg: rgba(255, 255, 255, 0.0);
-  --card-border: rgba(255, 255, 255, 0.22);
-  --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-
-  --brand: #9b1121;
-  /* 夜は赤を少し落とす */
+  --brand: #fff;
   --brand-ink: black;
+
+  --header-border: rgba(226, 232, 240, 0.28);
 
   --frame: rgba(226, 232, 240, 0.28);
   --surface: rgba(255, 255, 255, 0.10);
@@ -111,8 +95,10 @@ body[data-theme="night"] {
   --cta-border: rgba(226, 232, 240, 0.35);
   --cta-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 
-  --summary-bg: rgba(255, 255, 255, 0.08);
+  --summary-bg: rgba(255, 255, 255, 0.6);
   --summary-border: rgba(226, 232, 240, 0.30);
+  --summary-cl:#223a70;
+  --summary-val:#223a70;
 
   --header-bg: rgba(255, 255, 255, 0.06);
   --header-title-shadow: none;
@@ -562,7 +548,13 @@ input {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(60deg, var(--bg-1) 0%, var(--bg-2) 100%);
+  background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+}
+
+.bg-sun-layer{
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 /* 波は画面下に固定（必要なら top にもできる） */
@@ -649,22 +641,23 @@ input {
   right: 6%;
   bottom: 8%;
   /* ← waves の高さに合わせて調整 */
-  width: 220px;
-  height: 220px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle,
-      #ea553a 50%,
-      rgba(255, 170, 80, 0.0) 70%);
+  background: linear-gradient(to bottom,
+      #ffec47 20%,
+      #d3381c 100%
+      );
   animation: sunriseGlow 4.5s ease-in-out infinite;
 }
 
 /* 夜の月 */
 .bg-moon {
   position: absolute;
-  left: 10%;
-  top: 10%;
-  width: 110px;
-  height: 110px;
+  right: 10%;
+  top: 20%;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   background: radial-gradient(circle,
       #fff 0%,
@@ -675,11 +668,11 @@ input {
 /* 流れ星：1本の斜め線（尾がグラデ） */
 .shooting-star {
   position: absolute;
-  width: 220px;
+  width: 10px;
   /* 線の長さ */
-  height: 0.8px;
+  height: 5px;
   /* 線の太さ */
-  border-radius: 999px;
+  border-radius: 50px;
   pointer-events: none;
 
   /* 白線っぽい尾：左が薄く、右が明るい */
@@ -800,13 +793,14 @@ body[data-theme="morning"] {
 
 /* 夕 */
 body[data-theme="evening"] {
-  --bg-1: #ec6d71;
-  --bg-2: #a59aca;
+  --bg-1: #4d5aafac;
+  --bg-2: #ea5506;
 
   /* 波を少し暖色寄りにしたいなら */
-  --wave-1: rgba(255, 255, 255, 0.65);
+  --wave-1: rgba(168, 168, 168, 0.65);
   --wave-2: rgba(255, 255, 255, 0.48);
   --wave-3: rgba(255, 255, 255, 0.28);
+  --wave-4: rgba(255, 255, 255, 0.529);
 }
 
 /* 夜 */

@@ -58,6 +58,18 @@ export async function addPlateCloud(userId: string, plate: Plate) {
   });
 
   if (error) throw error;
+
+  await supabase
+  .from("global_serial_collection")
+  .upsert(
+    {
+      serial4: plate.serial,
+      first_user_id: userId,
+      first_plate_svg: plate.renderSvg ?? null,
+    },
+    { onConflict: "serial4", ignoreDuplicates: true }
+  );
+
 }
 export type PlateRow = {
   id: string;

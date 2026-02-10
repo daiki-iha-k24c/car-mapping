@@ -1,11 +1,11 @@
-import { supabase } from "../lib/supabaseClient";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 import SerialCollectionGrid, { type SerialRow } from "../components/SerialCollectionGrid";
 
 const TOTAL = 9999;
 
-export default function SerialCollectionPage() {
+export default function GlobalSerialCollectionPage() {
   const [rows, setRows] = useState<SerialRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export default function SerialCollectionPage() {
       setError(null);
 
       const { data, error } = await supabase
-        .from("user_serial_collection")
+        .from("global_serial_collection")
         .select("serial4, first_plate_svg");
 
       if (error) {
@@ -37,7 +37,7 @@ export default function SerialCollectionPage() {
     <div style={{ padding: 12 }}>
       <div className="header">
         <div>
-          <h2 style={{ margin: "8px 0" }}>ナンバーコレクション</h2>
+          <h3 style={{ margin: "8px 0" }}>ナンバーコレクション(みんな)</h3>
         </div>
 
         <div className="header-actions">

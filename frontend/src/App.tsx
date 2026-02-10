@@ -22,7 +22,7 @@ import { PlatePeekProvider } from "./context/PlatePeekContext";
 import WaveBackground from "./components/WaveBackground";
 import { useEffect } from "react";
 import { applyThemeFromPref, getThemePref } from "./lib/themePref";
-
+import GroupSerialCollectionPage from "./pages/GroupSerialCollectionPage";
 
 export default function App() {
   return (
@@ -99,6 +99,8 @@ function AppInner() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/serial-collection/global" element={<GroupSerialCollectionPage />} />
+
 
             <Route path="/u/:username" element={<UserMapPage />} />
             <Route path="/ranking" element={<RankingPage />} />

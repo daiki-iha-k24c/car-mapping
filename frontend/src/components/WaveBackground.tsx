@@ -24,6 +24,27 @@ export default function WaveBackground() {
 
   return (
     <div className={`wave-bg theme-${theme}`} aria-hidden="true">
+      {/* 🌅 朝：朝日（波線の近く） */}
+      <div className="bg-sun-layer">
+      {theme === "morning" && <div className="bg-sunrise" />}
+      </div>
+      {/* ☀️ 昼：太陽 */}
+      {theme === "day" && <div className="bg-sun" />}
+
+      {/* 🌇 夕方：夕日 */}
+      <div className="bg-sun-layer">
+        {theme === "evening" && <div className="bg-evening-sun" />}
+      </div>
+      {/* 🌙 夜：月 + 流れ星 */}
+      {theme === "night" && (
+        <>
+          <div className="bg-moon" />
+          <div className="shooting-star s1" />
+          <div className="shooting-star s2" />
+          <div className="shooting-star s3" />
+        </>
+      )}
+
       {/* 🌊 波線（既存） */}
       <svg
         className="waves"
@@ -46,24 +67,6 @@ export default function WaveBackground() {
         </g>
       </svg>
 
-      {/* 🌅 朝：朝日（波線の近く） */}
-      {theme === "morning" && <div className="bg-sunrise" />}
-
-      {/* ☀️ 昼：太陽 */}
-      {theme === "day" && <div className="bg-sun" />}
-
-      {/* 🌇 夕方：夕日 */}
-      {theme === "evening" && <div className="bg-evening-sun" />}
-
-      {/* 🌙 夜：月 + 流れ星 */}
-      {theme === "night" && (
-        <>
-          <div className="bg-moon" />
-          <div className="shooting-star s1" />
-          <div className="shooting-star s2" />
-          <div className="shooting-star s3" />
-        </>
-      )}
     </div>
   );
 }

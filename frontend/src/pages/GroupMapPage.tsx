@@ -272,6 +272,8 @@ export default function GroupMapPage() {
                             padding: 16,
                             maxHeight: "82vh",
                             overflow: "auto",
+                            background:"#fff",
+                            color:"black",
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
