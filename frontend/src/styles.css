@@ -689,7 +689,7 @@ input {
       rgba(255, 255, 255, 1));
 
   /* 斜めにする */
-  transform: rotate(-25deg);
+  transform: rotate(-45deg);
   opacity: 0;
 
   /* ほんの少しだけ柔らかく */
