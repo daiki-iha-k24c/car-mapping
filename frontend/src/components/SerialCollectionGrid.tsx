@@ -4,14 +4,17 @@ import { useMemo, useState, useEffect } from "react";
 export type SerialRow = {
   serial4: string;
   first_plate_svg: string | null;
+
+  // ✅ みんな用（あってもなくてもOK）
+  first_user_id?: string | null;
+  first_collected_at?: string | null;
 };
 
-const TOTAL = 9999; // 0001〜9999
+const TOTAL = 9999;
 
 function serialFromIndex(i: number) {
   return String(i + 1).padStart(4, "0");
 }
-
 function placeholderLabelFromSerial4(serial4: string) {
   const n = parseInt(serial4, 10);
   const d = String(n);
@@ -20,13 +23,13 @@ function placeholderLabelFromSerial4(serial4: string) {
 
 export default function SerialCollectionGrid({
   rows,
+  onPick,
 }: {
   rows: SerialRow[];
+  onPick?: (serial4: string, row: SerialRow | undefined) => void;
 }) {
-  // 高さだけは画面に合わせて state で固定（スクロール中に変わらない）
   const [gridH, setGridH] = useState(650);
 
-  // ★4列固定レイアウト
   const columnCount = 4;
   const gap = 12;
   const cellW = 70;
@@ -64,10 +67,19 @@ export default function SerialCollectionGrid({
           const serial4 = serialFromIndex(idx);
           const hit = map.get(serial4);
 
+          const clickable = !!(hit && onPick);
+
           return (
             <div style={{ ...style, padding: "2px", boxSizing: "border-box" }}>
               {hit ? (
-                <div className="serial-have">
+                <div
+                  className="serial-have"
+                  role={clickable ? "button" : undefined}
+                  style={clickable ? { cursor: "pointer" } : undefined}
+                  onClick={
+                    clickable ? () => onPick?.(serial4, hit) : undefined
+                  }
+                >
                   {hit.first_plate_svg ? (
                     <div
                       className="serial-svg"
