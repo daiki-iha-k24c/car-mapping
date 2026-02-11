@@ -1,9 +1,6 @@
 :root {
-  /* 背景（波のグラデと合わせる） */
-  --bg-1: #bfefff;
-  --bg-2: #fff3cf;
 
-  --header-border: black;
+  --header-border: #e0ebaf;
 
   /* テキスト */
   --text: #111827;
@@ -15,63 +12,75 @@
   --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 
   /* フレーム色（茶枠） */
-  --frame: gray;
 
-  /* ブランド（赤） */
-  --brand: #e2041b;
-  --brand-ink: #fff1cf;
+  /* タイトルヘッダー */
+  --brand: #88cb7f;
+  --brand-ink: #fff;
 
   /* サーフェス（カード/フッター等の“面”） */
   --surface: rgba(255, 248, 220, 0.5);
 
   /* ボタン（登録ボタン） */
-  --cta-bg: #ffffff;
-  --cta-text: #762f07;
-  --cta-border: #762f07;
-  --cta-shadow: 0 6px 16px rgba(150, 81, 77, 0.7);
+  --cta-bg: linear-gradient(#ffffff, #d6e9ca);
+  --cta-text: #88cb7f;
+  --cta-border: #98d98e;
+  --cta-shadow: 0 6px 16px rgba(185, 252, 173, 0.7);
 
   /* サマリー */
-  --summary-bg: rgba(255, 255, 255, 0.08);
-  --summary-border: var(--brand-ink);
-  --summary-cl: black;
-  --summary-val: black;
+  --summary-bg: rgba(255, 255, 255, 0.5);
+  --summary-border: #badcad;
+  --summary-cl: #524e4d;
+  --summary-val: #524e4d;
 
   /* ヘッダー */
-  --header-bg: var(--brand);
   --header-title-shadow: 3px 1px 0 var(--brand-ink),
     -1px -1px 0 var(--brand-ink), -1px 1px 0 var(--brand-ink),
     1px -1px 0 var(--brand-ink), 0px 1px 0 var(--brand-ink),
     0 -1px 0 var(--brand-ink), -1px 0 0 var(--brand-ink),
     1px 0 0 var(--brand-ink);
+  --header-bg: rgba(255, 255, 255, 0.5);
+  --header-title-shadow: none;
 }
 
 
 /* 朝 */
 body[data-theme="morning"] {
-  --bg-1: #bfefff;
-  --bg-2: #fff3cf;
+  --brand: #2ca9e1;
 
-  --brand: #ed6d35;
-
-  --header-bg: rgba(255, 0255, 255, 0.7);
-  --header-border: #ffbf4f;
+  --header-bg: rgba(255, 0255, 255, 0.5);
+  --header-border: #fff;
 
   --frame: #ffbf4f;
 
-  --summary-cl: black;
-  --summary-val: #00afcc;
-  --summary-border: #ffbf4f;
+  --summary-bg: rgba(255, 255, 255, 0.01);
+  --summary-cl: #2ca9e1;
+  --summary-val: #fff;
+  --summary-border: #daffff;
 
   --cta-shadow: 7px 6px 5px rgba(0, 0, 0, 0.12);
-  --cta-bg: linear-gradient(#ffffff, #f7ba5da8);
-  --cta-text: #ea5506;
-  --cta-border: #ffbf4f;
+  --cta-bg: linear-gradient(#ffffff, #accfff);
+  --cta-text: #2ca9e1;
+  --cta-border: #59b9c6;
 }
 
 /* 夕 */
 body[data-theme="evening"] {
-  --brand: #cc1025;
-  --surface: rgba(255, 250, 240, 0.68);
+  --brand: #ffea00;
+
+  --header-bg: rgba(254, 185, 66, 0.215);
+  --header-border: #e49e61;
+
+  --frame: #ffbf4f;
+
+  --summary-bg: rgba(255, 255, 255, 0.01);
+  --summary-cl: #ffea00;
+  --summary-val: #fff;
+  --summary-border: #fcd575;
+
+  --cta-shadow: 7px 6px 5px rgba(0, 0, 0, 0.12);
+  --cta-bg: linear-gradient(#ffffff, #f3bf88);
+  --cta-text: #e49e61;
+  --cta-border: #e49e61;
 }
 
 /* 夜（雰囲気変える） */
@@ -502,15 +511,15 @@ input {
 }
 
 .summaryLabel {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  opacity: 2;
+  opacity: 5;
   color: var(--summary-cl);
   margin-bottom: 6px;
 }
 
 .summaryValue {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
   line-height: 1.1;
   color: var(--summary-val);
@@ -521,7 +530,7 @@ input {
   font-size: 12px;
   font-weight: 700;
   margin-left: 6px;
-  opacity: 0.7;
+  opacity: 5;
 }
 
 .summaryDivider {
@@ -617,7 +626,7 @@ input {
   height: 220px;
   border-radius: 50%;
   background: radial-gradient(circle,
-      #ffea00 50%,
+      #fef263 50%,
       rgba(255, 170, 80, 0.0) 70%);
   animation: sunriseGlow 4.5s ease-in-out infinite;
 }
@@ -776,8 +785,8 @@ input {
 
 /* デフォルト（昼） */
 body {
-  --bg-1: #bfefff;
-  --bg-2: #fff3cf;
+  --bg-1: #fff3cf;
+  --bg-2: #bfefff;
 
   --wave-1: rgba(255, 255, 255, 0.70);
   --wave-2: rgba(255, 255, 255, 0.50);
@@ -787,7 +796,7 @@ body {
 
 /* 朝 */
 body[data-theme="morning"] {
-  --bg-1: #ffff7f;
+  --bg-1: #89c3eb;
   --bg-2: #b7ffff;
 }
 

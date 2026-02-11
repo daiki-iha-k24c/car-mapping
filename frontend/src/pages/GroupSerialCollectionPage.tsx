@@ -75,6 +75,7 @@ export default function GlobalSerialCollectionPage() {
   const achieved = rows.length;
   const rate = achieved / TOTAL;
   const ratePct = (rate * 100).toFixed(2); // 例: "0.0" "12.3"
+    
 
   const pickedUsername = useMemo(() => {
     if (!picked?.row.first_user_id) return null;
@@ -88,12 +89,11 @@ export default function GlobalSerialCollectionPage() {
     <div style={{ padding: 12 }}>
       <div className="header">
         <div>
-          <h2 style={{ margin: "8px 0" }}>ナンバーコレクション</h2>
-          <div style={{ opacity: 0.7, marginTop: 2 }}>みんな</div>
+          <h3 style={{ margin: "8px 0" }}>ナンバーコレクション(みんな)</h3>
         </div>
 
         <div className="header-actions">
-          <Link to="/" className="btn">ホームに戻る</Link>
+          <Link to="/" className="btn">ホーム</Link>
         </div>
       </div>
       <div className="summaryBar">
@@ -114,6 +114,14 @@ export default function GlobalSerialCollectionPage() {
             </div>
           </div>
         </>
+      </div>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 12,
+        }}
+      >
       </div>
       <SerialCollectionGrid
         rows={rows}
@@ -170,6 +178,8 @@ export default function GlobalSerialCollectionPage() {
                 </b>
               </div>
             </div>
+
+
 
             {picked.row.first_plate_svg && (
               <div style={{ marginTop: 12 }}>
