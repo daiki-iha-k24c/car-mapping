@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { listPlatesCloudByRegionId } from "../storage/platesCloud";
-import FlipPlateCard from "./FlipPlateCard";
 import type { Plate } from "../storage/plates";
 
 type Props = {

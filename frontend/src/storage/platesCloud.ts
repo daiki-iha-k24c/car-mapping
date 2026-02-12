@@ -71,15 +71,43 @@ export async function addPlateCloud(userId: string, plate: Plate) {
       captured_at: plate.capturedAt ?? null,
       created_at: plate.createdAt,
     })
-    .select("render_svg")
+    .select("id, render_svg")
     .single();
 
   if (error) throw error;
 
+  // ✅ ここから加点（登録時点数固定）
+  // region_id は plates と同じ "都道府県:地域" を使う
+  const regionId = plate.regionId;
+
+  // rarity / points 取得
+  const { data: rr, error: rrErr } = await supabase
+    .from("region_rarity_current")
+    .select("rarity_level, points")
+    .eq("region_id", regionId)
+    .maybeSingle();
+
+  if (rrErr) throw rrErr;
+
+  // 見つからない時の保険（通常は起きない想定）
+  const rarityLevel = rr?.rarity_level ?? 5;
+  const points = rr?.points ?? 40;
+
+  // score_events へ記録（固定）
+  const { error: seErr } = await supabase
+    .from("score_events")
+    .insert({
+      user_id: userId,
+      plate_id: data?.id ?? plate.id, // ✅ plates.id を固定で紐付け
+      region_id: regionId,
+      rarity_level: rarityLevel,
+      points,
+    });
+  if (seErr) throw seErr;
+
   const savedSvg = data?.render_svg ?? null;
 
   // --- ② みんなのナンバーコレクション（先着1名のみ・SVG込み） ---
-  // 失敗しても個人登録は成功しているので throw しない
   if (savedSvg) {
     const { error: gErr } = await supabase
       .from("global_serial_collection")
@@ -93,12 +121,15 @@ export async function addPlateCloud(userId: string, plate: Plate) {
       );
 
     if (gErr) {
-      // UXを壊さないために握りつぶし（ログだけ）
       console.warn("global_serial_collection upsert failed:", gErr);
     }
   } else {
     console.warn("render_svg is empty. skip global_serial_collection upsert.");
   }
+
+  // ✅ 最後に返す
+  return { points, rarityLevel };
+
 }
 
 
@@ -184,4 +215,15 @@ export async function listPlatesCloud(userId: string): Promise<Plate[]> {
     photo_url: r.photo_url ?? null,
     capturedAt: r.captured_at ?? null, // ✅ ここ
   }));
+}
+
+export async function getMyTotalPointsCloud(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("score_events")
+    .select("points")
+    .eq("user_id", userId);
+
+  if (error) throw error;
+
+  return (data ?? []).reduce((sum, r: any) => sum + (Number(r.points) || 0), 0);
 }

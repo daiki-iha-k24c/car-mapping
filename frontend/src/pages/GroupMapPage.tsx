@@ -5,6 +5,9 @@ import type { PrefStatus } from "../lib/region";
 import { PLATE_REGIONS } from "../data/plateRegions";
 import { Link } from "react-router-dom";
 import { listGroupPlatesByRegion } from "../storage/groupPlates";
+import { listPlatesCloudByRegionId } from "../storage/platesCloud";
+import type { Plate } from "../storage/plates";
+import PlatePeekModal from "../components/PlatePeekModal";
 
 type GroupRow = {
     region_id: string;
@@ -28,11 +31,62 @@ type RegionPlatesState = {
     rows: any[];
 };
 
+type PlateRow = {
+    id: string;
+    region_id: string;
+    class_number: string;
+    kana: string;
+    serial: string;
+    color: any;
+    render_svg: string;
+    created_at: string;
+    photo_url: string | null;
+    captured_at: string | null;
+    user_id: string;
+
+    profile?: {
+        username?: string;
+        avatar_url?: string;
+    };
+};
+
+function ensureViewBox(svg: string) {
+    if (!svg) return svg;
+    if (/viewBox="/i.test(svg)) {
+        return svg.replace(/viewBox="[^"]*"/i, 'viewBox="0 0 320 180"');
+    }
+    return svg.replace(/<svg\b/i, '<svg viewBox="0 0 320 180"');
+}
+
+function rowToPlate(r: PlateRow): Plate {
+    return {
+        id: r.id,
+        regionId: r.region_id,
+        classNumber: r.class_number,
+        kana: r.kana,
+        serial: r.serial,
+        color: r.color,
+        renderSvg: ensureViewBox(r.render_svg),
+        createdAt: r.created_at,
+        photo_url: r.photo_url ?? null,
+        capturedAt: r.captured_at ?? null,
+    };
+}
+
+
+function normPref(s: string) {
+    const t = (s ?? "").trim();
+    if (!t) return t;
+    if (t === "北海道") return "北海道";
+    if (t.endsWith("都") || t.endsWith("道") || t.endsWith("府") || t.endsWith("県")) return t;
+    return `${t}県`;
+}
+
 
 function regionIdFromPlate(prefecture: string, name: string) {
-    // DB の region_id が "静岡県:浜松" 形式の想定
-    return `${prefecture}:${name}`;
+    return `${normPref(prefecture)}:${name}`;
 }
+
 
 export default function GroupMapPage() {
     // --- group map (pref-level) ---
@@ -52,6 +106,19 @@ export default function GroupMapPage() {
     const [memberMap, setMemberMap] = useState<Record<string, MemberState>>({});
 
     const [platesMap, setPlatesMap] = useState<Record<string, RegionPlatesState>>({});
+
+    const [pickedPlate, setPickedPlate] = useState<Plate | null>(null);
+
+    const onOpenPlate = (p: Plate) => setPickedPlate(p);
+    const onClosePlate = () => setPickedPlate(null);
+
+    const [peekOpen, setPeekOpen] = useState(false);
+    const [peekPlate, setPeekPlate] = useState<Plate | null>(null);
+
+    const openPlate = (p: Plate) => {
+        setPeekPlate(p);
+        setPeekOpen(true);
+    };
 
 
     // ① みんなの地図（都道府県塗り用）データ取得
@@ -80,6 +147,25 @@ export default function GroupMapPage() {
             cancelled = true;
         };
     }, []);
+
+    useEffect(() => {
+        (async () => {
+            const { data: ures } = await supabase.auth.getUser();
+            console.log("GroupMap auth.uid =", ures.user?.id);
+
+            const uid = ures.user?.id;
+            if (!uid) return;
+
+            const { data: frows, error } = await supabase
+                .from("follows")
+                .select("follower_id,following_id")
+                .or(`follower_id.eq.${uid},following_id.eq.${uid}`);
+            console.log("prefRows sample", prefRows.slice(0, 5));
+
+            console.log("follows involving me =", frows?.length, error, frows?.slice(0, 5));
+        })();
+    }, []);
+
 
     const totalMembers = rows[0]?.total_members ?? 0;
 
@@ -130,37 +216,40 @@ export default function GroupMapPage() {
     }, [progressByRegionId]);
 
     // ④ 都道府県タップ → その都道府県の region 集計を取得（地域一覧用）
-    const openPref = useCallback(
-        async (prefName: string) => {
-            setActivePref(prefName);
-            setPrefModalOpen(true);
+    const openPref = useCallback(async (prefName: string) => {
+        const { data: mids, error: midsErr } = await supabase.rpc("my_group_member_ids");
+        console.log("member ids rpc:", midsErr, mids);
 
-            // 都道府県を切り替えたらアコーディオン状態は閉じる
-            setOpenRegionId(null);
+        const key = normPref(prefName);
+        console.log("RPC pref =", key);
+        setActivePref(key);
+        setPrefModalOpen(true);
+        setOpenRegionId(null);
 
-            // メンバー一覧キャッシュは残してOK（再表示高速化）
-            // もし都道府県を変えたらキャッシュもリセットしたいならここで setMemberMap({}) を入れる
+        setPrefLoading(true);
+        setPrefErr(null);
+        setPrefRows([]);
 
-            setPrefLoading(true);
-            setPrefErr(null);
+        const { data, error } = await supabase.rpc(
+            "get_group_prefecture_regions",
+            { pref_name: key }
+        );
+
+        console.log("pref rpc result len=", (data ?? []).length, error, data?.slice?.(0, 3)); // ✅ 追加
+
+        if (error) {
+            setPrefErr(error.message);
             setPrefRows([]);
-
-            const { data, error } = await supabase.rpc("get_group_prefecture_regions", {
-                pref_name: prefName,
-            });
-
-            if (error) {
-                setPrefErr(error.message);
-                setPrefRows([]);
-                setPrefLoading(false);
-                return;
-            }
-
-            setPrefRows((data ?? []) as GroupRow[]);
             setPrefLoading(false);
-        },
-        []
-    );
+            return;
+        }
+
+        setPrefRows((data ?? []) as GroupRow[]);
+        setPrefLoading(false);
+    }, []);
+
+
+
 
     // ⑤ 地域の達成者一覧（遅延ロード＆キャッシュ）
     async function ensurePlates(regionId: string) {
@@ -201,6 +290,7 @@ export default function GroupMapPage() {
         for (const r of prefRows) map[r.region_id] = r.completed_count;
         return map;
     }, [prefRows]);
+
 
     return (
         <div className="container">
@@ -272,8 +362,8 @@ export default function GroupMapPage() {
                             padding: 16,
                             maxHeight: "82vh",
                             overflow: "auto",
-                            background:"#fff",
-                            color:"black",
+                            background: "#fff",
+                            color: "black",
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -337,6 +427,8 @@ export default function GroupMapPage() {
 
                                                     if (!isOpen) {
                                                         await ensurePlates(regionId);
+                                                        const rows = await listGroupPlatesByRegion(regionId);
+                                                        console.log("group plates rows:", regionId, rows.length, rows.slice(0, 2));
 
                                                     }
                                                 }}
@@ -376,84 +468,102 @@ export default function GroupMapPage() {
                                                         </div>
                                                     )}
 
+
                                                     {platesState?.loading ? (
-                                                        <div className="small">読み込み中…</div>
+                                                        <div style={{ opacity: 0.6, fontSize: 13 }}>読み込み中...</div>
                                                     ) : (platesState?.rows?.length ?? 0) === 0 ? (
-                                                        <div className="small">この地域のナンバープレートはまだありません</div>
+                                                        <div style={{ opacity: 0.6, fontSize: 13 }}>
+                                                            この地域のナンバープレートはまだありません
+                                                        </div>
                                                     ) : (
-                                                        <div style={{ display: "grid", gap: 10 }}>
-                                                            {platesState!.rows.map((p: any) => {
-                                                                const hue = hashToHue(p.user_id);
-                                                                const bg = `hsl(${hue} 70% 96%)`;
-                                                                const ring = `hsl(${hue} 70% 55%)`;
+                                                        <div
+                                                            style={{
+                                                                display: "grid",
+                                                                gridTemplateColumns: "repeat(2, 1fr)",
+                                                                gap: 8,
+                                                            }}
+                                                        >
+                                                            {platesState!.rows.map((row: PlateRow) => {
+                                                                const p = rowToPlate(row);
+
                                                                 return (
-                                                                    <div
+                                                                    <button
                                                                         key={p.id}
-                                                                        className="card"
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const plate = rowToPlate(row); // rowはDB row
+                                                                            console.log("[group] openPlate", plate);
+                                                                            openPlate(p);
+                                                                        }}
+
                                                                         style={{
-                                                                            padding: 10,
-                                                                            borderRadius: 12,
-                                                                            background: bg,
-                                                                            display: "flex",
-                                                                            alignItems: "center",
-                                                                            gap: 12,
+                                                                            border: "2px solid #e5e7eb",
+                                                                            borderRadius: 14,
+                                                                            background: "#fff",
+                                                                            padding: 8,
+                                                                            cursor: "pointer",
+                                                                            textAlign: "left",
+                                                                            boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
                                                                         }}
                                                                     >
-                                                                        {/* アイコン */}
+                                                                        {/* 👤 ユーザー名表示 */}
                                                                         <div
                                                                             style={{
-                                                                                width: 44,
-                                                                                height: 44,
-                                                                                borderRadius: 999,
+                                                                                fontSize: 12,
+                                                                                fontWeight: 700,
+                                                                                marginBottom: 6,
+                                                                                color: "#111827",
+                                                                            }}
+                                                                        >
+                                                                            {row.profile?.username ?? "unknown"}
+                                                                        </div>
+
+                                                                        {/* サムネ固定高さ */}
+                                                                        <div
+                                                                            style={{
+                                                                                height: 90,
+                                                                                borderRadius: 12,
+                                                                                border: "2px solid #e5e7eb",
                                                                                 overflow: "hidden",
-                                                                                border: `2px solid ${ring}`,
                                                                                 background: "#fff",
-                                                                                flex: "0 0 auto",
                                                                                 display: "flex",
                                                                                 alignItems: "center",
                                                                                 justifyContent: "center",
-                                                                                fontWeight: 700,
                                                                             }}
-                                                                            title={p.profile?.username ?? p.user_id}
                                                                         >
-                                                                            {p.profile?.avatar_url ? (
-                                                                                <img
-                                                                                    src={p.profile.avatar_url}
-                                                                                    alt=""
-                                                                                    width={44}
-                                                                                    height={44}
-                                                                                    style={{ objectFit: "cover" }}
-                                                                                    onError={(e) => {
-                                                                                        // URL切れでも落ちない
-                                                                                        (e.currentTarget as HTMLImageElement).style.display = "none";
-                                                                                    }}
-                                                                                />
-                                                                            ) : (
-                                                                                "👤"
-                                                                            )}
+                                                                            <div
+                                                                                style={{
+                                                                                    width: "100%",
+                                                                                    height: "100%",
+                                                                                    padding: 6,
+                                                                                    boxSizing: "border-box",
+                                                                                }}
+                                                                                dangerouslySetInnerHTML={{ __html: p.renderSvg }}
+                                                                            />
                                                                         </div>
 
-                                                                        {/* プレート */}
-                                                                        <div style={{ flex: 1 }}>
-                                                                            <div className="small" style={{ opacity: 0.75, marginBottom: 6 }}>
-                                                                                {p.profile?.username ?? "unknown"}
-                                                                            </div>
-
-                                                                            <div style={{ display: "flex", justifyContent: "center" }}>
-                                                                                <img
-                                                                                    className="plate-img"
-                                                                                    src={toSvgDataUrl(p.render_svg)}
-                                                                                    alt=""
-                                                                                    loading="lazy"
-                                                                                />
+                                                                        {/* 下情報 */}
+                                                                        <div
+                                                                            style={{
+                                                                                marginTop: 6,
+                                                                                display: "flex",
+                                                                                justifyContent: "space-between",
+                                                                                gap: 8,
+                                                                            }}
+                                                                        >
+                                                                            <div style={{ fontSize: 11, color: "#6b7280" }}>
+                                                                                {p.photo_url ? "📸あり" : "📷なし"}
                                                                             </div>
                                                                         </div>
-                                                                    </div>
+                                                                    </button>
                                                                 );
                                                             })}
                                                         </div>
-                                                    )
-                                                    }
+                                                    )}
+
+
+
                                                 </div>
                                             )}
                                         </div>
@@ -464,7 +574,20 @@ export default function GroupMapPage() {
                         }
                     </div>
                 </div>
+
             )}
+                <PlatePeekModal
+                    open={peekOpen}
+                    plate={peekPlate}
+                    onClose={() => setPeekOpen(false)}
+                />
+
+        
+
         </div>
+
     );
+
+
 }
+

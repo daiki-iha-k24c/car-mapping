@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useUser } from "../context/UserContext";
 import type { Region } from "../lib/region";
+import { getMyTotalPointsCloud } from "../storage/platesCloud";
+
 
 type Props = {
   regions: Array<Region & { reading?: string }>; // 全地域（分母）
+  refreshKey?: number; // ✅ 追加
 };
 
-export default function UserSummaryBar({ regions }: Props) {
+export default function UserSummaryBar({regions, refreshKey = 0  }: Props) {
   const { userId } = useUser();
 
   const totalRegions = regions.length;
@@ -17,6 +20,10 @@ export default function UserSummaryBar({ regions }: Props) {
 
   const [completedRegions, setCompletedRegions] = useState(0);
   const [totalPlates, setTotalPlates] = useState(0);
+
+  const [totalPoints, setTotalPoints] = useState<number>(0);
+  const [pointsLoading, setPointsLoading] = useState(false);
+
 
   useEffect(() => {
     if (!userId) return;
@@ -60,7 +67,22 @@ export default function UserSummaryBar({ regions }: Props) {
     return () => {
       alive = false;
     };
-  }, [userId]);
+  }, [userId, refreshKey]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    (async () => {
+      setPointsLoading(true);
+      try {
+        const pts = await getMyTotalPointsCloud(userId);
+        setTotalPoints(pts);
+      } finally {
+        setPointsLoading(false);
+      }
+    })();
+  }, [userId, refreshKey]);
+
 
   const pct = useMemo(() => {
     if (!totalRegions) return 0;
@@ -92,6 +114,9 @@ export default function UserSummaryBar({ regions }: Props) {
             <div className="summaryValue">
               {totalPlates}
               <span className="summarySub">枚</span>
+              <span className="summaryValue">
+                （{pointsLoading ? "…" : `${totalPoints}pt`}）
+              </span>
             </div>
           </div>
         </>

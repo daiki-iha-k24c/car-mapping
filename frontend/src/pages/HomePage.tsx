@@ -48,6 +48,8 @@ export default function HomePage() {
   const [recordMap, setRecordMap] = useState<Record<string, RegionRecord>>({});
   const { username } = useUser();
   const AVATAR_BUCKET = "avatars";
+  const [summaryRefresh, setSummaryRefresh] = useState(0);
+
 
   {
     !loading && !username && (
@@ -317,13 +319,13 @@ export default function HomePage() {
 
             {menuOpen && (
               <div className="menu-popover" role="menu">
-                <Link
+                {/* <Link
                   to="/regions"
                   className="menu-item"
                   onClick={() => setMenuOpen(false)}
                 >
                   🗾地域一覧
-                </Link>
+                </Link> */}
 
                 <Link
                   to="/ranking"
@@ -381,7 +383,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
-      <UserSummaryBar regions={regions} />
+      <UserSummaryBar regions={regions} refreshKey={summaryRefresh} />
       <div className="stack">
 
         <JapanMap prefStatusMap={prefProgress} onPickPrefecture={openPref} />
@@ -415,6 +417,7 @@ export default function HomePage() {
         onClose={() => setPlateOpen(false)}
         onRegistered={async (regionName: string) => {
           markCompletedByRegionName(regionName);
+          setSummaryRefresh((n) => n + 1);
         }}
       />
       <PlatePeekModal

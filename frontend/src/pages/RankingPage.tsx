@@ -1,33 +1,128 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { useUser } from "../context/UserContext";
 
 type Row = {
   user_id: string;
   username: string;
+  avatar_url: string | null;
   completed_count: number;
   plate_count: number;
+  total_points: number;
 };
+
+type RarityRow = {
+  region_id: string;      // "都道府県:地域"
+  rarity_level: number;   // 1..10
+  points: number;
+};
+
+type SortKey = "points" | "completed" | "plates";
+
+function toPublicAvatarUrl(pathOrUrl: string | null) {
+  if (!pathOrUrl) return null;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+
+  // ✅ ここをあなたのバケット名に
+  const { data } = supabase.storage.from("avatars").getPublicUrl(pathOrUrl);
+  return data.publicUrl ?? null;
+}
+
+
 
 export default function RankingPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
-  const [sortKey, setSortKey] = useState<"completed" | "plates">("completed");
+  const [sortKey, setSortKey] = useState<SortKey>("points");
+  const [rarityRows, setRarityRows] = useState<RarityRow[]>([]);
+  const { userId } = useUser();
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       setErr(null);
 
-      const { data, error } = await supabase
+      // 1) フレンドランキング（自分+フレンドの合計pt）
+      const { data: lb, error: lbErr } = await supabase.rpc("friend_leaderboard");
+      if (lbErr) throw lbErr;
+
+      const ids: string[] = (lb ?? [])
+        .map((r: any) => String(r.user_id))
+        .filter(Boolean);
+
+
+      if (ids.length === 0) {
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+
+      // 2) profiles（username, avatar）
+      const { data: profs, error: pErr } = await supabase
+        .from("profiles")
+        .select("user_id, username, avatar_url")
+        .in("user_id", ids);
+
+      if (pErr) throw pErr;
+
+      // 3) v_user_stats（登録地域数 / プレート数）
+      const { data: stats, error: sErr } = await supabase
         .from("v_user_stats")
-        .select("user_id, username, completed_count, plate_count");
+        .select("user_id, completed_count, plate_count")
+        .in("user_id", ids);
 
-      if (error) throw error;
+      if (sErr) throw sErr;
 
-      setRows((data ?? []) as Row[]);
+      // 4) マージ
+      const profMap = new Map<
+        string,
+        { username: string; avatar_url: string | null }
+      >();
+
+      (profs ?? []).forEach((p: any) => {
+        profMap.set(String(p.user_id), {
+          username: String(p.username ?? "unknown"),
+          avatar_url: p.avatar_url ?? null, // ← ここでは変換しない
+        });
+      });
+
+
+      const statMap = new Map<string, { completed_count: number; plate_count: number }>();
+      (stats ?? []).forEach((s: any) => {
+        statMap.set(String(s.user_id), {
+          completed_count: Number(s.completed_count ?? 0),
+          plate_count: Number(s.plate_count ?? 0),
+        });
+      });
+
+      const ptsMap = new Map<string, number>();
+      (lb ?? []).forEach((r: any) => {
+        ptsMap.set(String(r.user_id), Number(r.total_points ?? 0));
+      });
+
+      const merged: Row[] = ids.map((id) => ({
+        user_id: id,
+        username: profMap.get(id)?.username ?? "unknown",
+        avatar_url: toPublicAvatarUrl(profMap.get(id)?.avatar_url ?? null),
+        completed_count: statMap.get(id)?.completed_count ?? 0,
+        plate_count: statMap.get(id)?.plate_count ?? 0,
+        total_points: ptsMap.get(id) ?? 0,
+      }));
+
+      const { data: rarity, error: rErr } = await supabase
+        .from("region_rarity_current")
+        .select("region_id, rarity_level, points")
+        .order("rarity_level", { ascending: false })
+        .order("region_id", { ascending: true });
+
+
+      if (rErr) throw rErr;
+
+      setRows(merged);
       setLoading(false);
+      setRarityRows((rarity ?? []) as RarityRow[]);
     })().catch((e) => {
       console.error(e);
       setErr(e?.message ?? "読み込みに失敗しました");
@@ -37,7 +132,9 @@ export default function RankingPage() {
 
   const sorted = useMemo(() => {
     const arr = rows.slice();
-    if (sortKey === "completed") {
+    if (sortKey === "points") {
+      arr.sort((a, b) => (b.total_points ?? 0) - (a.total_points ?? 0));
+    } else if (sortKey === "completed") {
       arr.sort((a, b) => (b.completed_count ?? 0) - (a.completed_count ?? 0));
     } else {
       arr.sort((a, b) => (b.plate_count ?? 0) - (a.plate_count ?? 0));
@@ -45,19 +142,53 @@ export default function RankingPage() {
     return arr;
   }, [rows, sortKey]);
 
+  const rarityGrouped = useMemo(() => {
+    const m = new Map<number, { points: number; regions: string[] }>();
+
+
+    for (const r of rarityRows) {
+      const lv = Number(r.rarity_level);
+      const pts = Number(r.points);
+      const name = String(r.region_id).split(":")[1] ?? String(r.region_id); // 地名だけ表示
+
+      if (!m.has(lv)) m.set(lv, { points: pts, regions: [] });
+      m.get(lv)!.regions.push(name);
+    }
+
+    // Lv10→Lv1の配列に
+    const out: Array<{ lv: number; points: number; regions: string[] }> = [];
+    for (let lv = 10; lv >= 1; lv--) {
+      const v = m.get(lv);
+      if (!v) continue;
+      out.push({ lv, points: v.points, regions: v.regions });
+    }
+    return out;
+  }, [rarityRows]);
+
+
   return (
     <div className="container">
       <div className="header">
         <div>
           <h2 style={{ margin: 0 }}>ランキング</h2>
-          <div className="small">登録地域数 / プレート数</div>
+          <div className="small">フレンド内（ポイント / 登録地域数 / プレート数）</div>
         </div>
         <div className="header-actions">
           <Link to="/" className="btn">← ホーム</Link>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, margin: "10px 0 14px" }}>
+      <div style={{ display: "flex", gap: 8, margin: "10px 0 14px", flexWrap: "wrap" }}>
+        <button
+          className="btn"
+          onClick={() => setSortKey("points")}
+          style={{
+            opacity: sortKey === "points" ? 1 : 0.6,
+            fontWeight: sortKey === "points" ? 800 : 600,
+          }}
+        >
+          ポイント
+        </button>
         <button
           className="btn"
           onClick={() => setSortKey("completed")}
@@ -98,10 +229,8 @@ export default function RankingPage() {
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {sorted.map((r, idx) => (
-            <Link
+            <div
               key={r.user_id}
-              to={`/u/${encodeURIComponent(r.username)}`}
-              className="btn"
               style={{
                 textDecoration: "none",
                 display: "flex",
@@ -124,17 +253,82 @@ export default function RankingPage() {
                 >
                   {idx + 1}
                 </div>
-                <div style={{ fontWeight: 800 }}>{r.username}</div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {r.avatar_url ? (
+                    <img
+                      src={r.avatar_url}
+                      alt=""
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        border: "1px solid #eee",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "#f3f4f6",
+                        border: "1px solid #eee",
+                      }}
+                    />
+                  )}
+                  <div style={{ fontWeight: 800 }}>{r.username}</div>
+                </div>
               </div>
 
-              <div style={{ display: "flex", gap: 10, fontSize: 13, opacity: 0.85 }}>
+              <div style={{ display: "flex", gap: 10, fontSize: 13, opacity: 0.88, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <span style={{ fontWeight: 800 }}>{r.total_points}pt</span>
                 <span>登録地域 {r.completed_count}</span>
                 <span>プレート {r.plate_count}</span>
               </div>
-            </Link>
+            </div>
+
           ))}
         </div>
+
       )}
+      <div style={{ marginTop: 16 }}>
+        <details
+          style={{
+            background: "#fff",
+            border: "1px solid #eee",
+            borderRadius: 14,
+            padding: 12,
+          }}
+        >
+          <summary style={{ cursor: "pointer", fontWeight: 900 }}>
+            現在の地域レベル・点数一覧（タップで開く）
+          </summary>
+
+          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            {rarityGrouped.map((g) => (
+              <div
+                key={g.lv}
+                style={{
+                  border: "1px solid #f0f0f0",
+                  borderRadius: 12,
+                  padding: 10,
+                }}
+              >
+                <div style={{ fontWeight: 900 }}>
+                  Lv{g.lv}（{g.points}pt）
+                </div>
+                <div style={{ marginTop: 6, fontSize: 13, opacity: 0.9, lineHeight: 1.6 }}>
+                  {g.regions.join("、")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
+      </div>
+
     </div>
+
   );
 }
