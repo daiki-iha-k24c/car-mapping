@@ -46,35 +46,26 @@ function publicUrlFromAvatarValue(avatarUrlOrPath: string | null) {
   if (isLikelyHttpUrl(avatarUrlOrPath) || isDataUrl(avatarUrlOrPath)) return avatarUrlOrPath;
 
   // 新方式：storage path
-  const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarUrlOrPath);
-  return data.publicUrl ?? null;
+const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(avatarUrlOrPath);
+return data.publicUrl ? `${data.publicUrl}?v=${Date.now()}` : null;
 }
 
-async function uploadAvatarAndSaveProfile(userId: string, file: File) {
-  // 1) 拡張子をpng固定でOK（画像加工してるならなおさら）
-  const path = `${userId}/avatar.png`; // ✅ 自分フォルダ配下
+async function uploadAvatar(userId: string, file: File) {
+  const path = `${userId}/avatar.png`;
 
-  // 2) upload（同名上書き）
-  const { error: upErr } = await supabase.storage
+  const { error } = await supabase.storage
     .from("avatars")
     .upload(path, file, {
       upsert: true,
       contentType: file.type || "image/png",
-      cacheControl: "60", // ← 後で説明（キャッシュ対策）
+      cacheControl: "60",
     });
 
-  if (upErr) throw upErr;
-
-  // 3) profiles更新：avatar_url に「パス」を入れる
-  const { error: pErr } = await supabase
-    .from("profiles")
-    .update({ avatar_url: path })
-    .eq("user_id", userId);
-
-  if (pErr) throw pErr;
-
+  if (error) throw error;
   return path;
 }
+
+
 
 export function ThemePicker() {
   const [mode, setMode] = useState<ThemeMode>("auto");
@@ -257,17 +248,17 @@ export default function MePage() {
       // 1) avatar の確定値を作る
       let nextAvatarValue: string | null = draftAvatarValue;
 
-      // file が選ばれていれば upload して path を採用
       if (avatarFile) {
-        nextAvatarValue = await uploadAvatarAndSaveProfile(user.id, avatarFile);
+        nextAvatarValue = await uploadAvatar(user.id, avatarFile);
       }
 
-      // 2) upsert
       const { error } = await supabase.from("profiles").upsert({
         user_id: user.id,
         username,
-        avatar_url: nextAvatarValue, // ✅ path or null
+        avatar_url: nextAvatarValue,
+        updated_at: new Date().toISOString(),
       });
+
 
       if (error) {
         const m = String(error.message).toLowerCase();
