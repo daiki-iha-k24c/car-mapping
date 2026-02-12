@@ -1,3 +1,19 @@
+:root{
+  --bg-color:#039be5;
+}
+
+body[data-theme="morning"] {
+  --bg-color: #a0d8ef;
+}
+
+body[data-theme="evening"] {
+  --bg-color: #f6ad49;
+}
+
+body[data-theme="night"] {
+  --bg-color: #1c305c;
+}
+
 .ws-root {
   position: fixed;
   inset: 0;
@@ -84,7 +100,7 @@
   width: 30px;
   height: 30px;
   border-radius: 999px;
-  background: #039be5;
+  background: var(--bg-color);
   box-shadow: 0 14px 34px rgba(0,0,0,0.16);
   transform: translate(-50%, -50%) ;
   opacity: 0;
@@ -115,7 +131,7 @@
 .ws-flood{
   position: fixed;
   inset: 0;
-  background: #039be5;
+  background: var(--bg-color);
   opacity: 0;
   pointer-events: none;
 

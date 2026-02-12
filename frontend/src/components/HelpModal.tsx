@@ -137,16 +137,6 @@ export default function HelpModal({ open, onClose, onClearAll }: Props) {
             閉じる
           </button>
 
-          <button
-            className="btn"
-            onClick={handleClearAll}
-            style={{
-              borderColor: "#f3b0b0",
-              background: "#fff5f5",
-            }}
-          >
-            全クリア
-          </button>
         </div>
       </div>
     </div>

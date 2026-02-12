@@ -37,7 +37,7 @@ export default function RankingPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("points");
   const [rarityRows, setRarityRows] = useState<RarityRow[]>([]);
-  const { userId } = useUser();
+  const { userId: meId } = useUser();
 
   useEffect(() => {
     (async () => {
@@ -171,7 +171,7 @@ export default function RankingPage() {
       <div className="header">
         <div>
           <h2 style={{ margin: 0 }}>ランキング</h2>
-          <div className="small">フレンド内（ポイント / 登録地域数 / プレート数）</div>
+          <div className="small">フレンド内のランキングです</div>
         </div>
         <div className="header-actions">
           <Link to="/" className="btn">← ホーム</Link>
@@ -207,7 +207,7 @@ export default function RankingPage() {
             fontWeight: sortKey === "plates" ? 800 : 600,
           }}
         >
-          プレート数
+          登録プレート数
         </button>
       </div>
 
@@ -228,68 +228,115 @@ export default function RankingPage() {
         </div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
-          {sorted.map((r, idx) => (
-            <div
-              key={r.user_id}
-              style={{
-                textDecoration: "none",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: 14,
-                borderRadius: 14,
-                background: "#fff",
-                border: "1px solid #eee",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {sorted.map((r, idx) => {
+            const isMe = !!meId && r.user_id === meId;
+
+            return (
+              <div
+                key={r.user_id}
+                style={{
+                  textDecoration: "none",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: 14,
+                  borderRadius: 14,
+
+                  // ✅ 自分だけハイライト
+                  background: isMe ? "#fff7ed" : "#fff",
+                  border: isMe ? "2px solid #fb923c" : "1px solid #eee",
+                  boxShadow: isMe ? "0 8px 22px rgba(251,146,60,0.22)" : "none",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      width: 30,
+                      textAlign: "center",
+                      fontWeight: 900,
+                      opacity: 0.8,
+                      color: isMe ? "#9a3412" : undefined,
+                    }}
+                  >
+                    {idx + 1}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {r.avatar_url ? (
+                      <img
+                        src={r.avatar_url}
+                        alt=""
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: isMe ? "2px solid #fb923c" : "1px solid #eee",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          background: "#f3f4f6",
+                          border: isMe ? "2px solid #fb923c" : "1px solid #eee",
+                        }}
+                      />
+                    )}
+
+                    <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>{r.username}</span>
+
+                      {isMe && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                            background: "#fb923c",
+                            color: "#fff",
+                            fontWeight: 900,
+                          }}
+                        >
+                          YOU
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div
                   style={{
-                    width: 30,
-                    textAlign: "center",
-                    fontWeight: 900,
-                    opacity: 0.8,
+                    display: "flex",
+                    gap: 10,
+                    fontSize: 13,
+                    opacity: 0.88,
+                    flexWrap: "wrap",
+                    justifyContent: "flex-end",
                   }}
                 >
-                  {idx + 1}
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {r.avatar_url ? (
-                    <img
-                      src={r.avatar_url}
-                      alt=""
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        border: "1px solid #eee",
-                      }}
-                    />
+                  {sortKey === "points" ? (
+                    <span style={{ fontSize:"18px",fontWeight: 800 }}>{r.total_points}pt</span>
+                  ) : sortKey === "completed" ? (
+                    <div style={{ fontSize: "18px",fontWeight: 800 }}>
+                      <span style={{ fontSize: "10px",fontWeight: 800 }}>合計：</span>
+                      {r.completed_count} 
+                      <span style={{ fontSize: "10px",fontWeight: 800 }}> 地域</span>
+                    </div>
                   ) : (
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: "#f3f4f6",
-                        border: "1px solid #eee",
-                      }}
-                    />
+                    <div style={{ fontSize: "18px",fontWeight: 800 }}>
+                      <span style={{ fontSize: "10px",fontWeight: 800 }}>合計：</span>
+                      {r.plate_count} 
+                      <span style={{ fontSize: "10px",fontWeight: 800 }}> 枚</span>
+                    </div>
                   )}
-                  <div style={{ fontWeight: 800 }}>{r.username}</div>
                 </div>
               </div>
+            );
+          })}
 
-              <div style={{ display: "flex", gap: 10, fontSize: 13, opacity: 0.88, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <span style={{ fontWeight: 800 }}>{r.total_points}pt</span>
-                <span>登録地域 {r.completed_count}</span>
-                <span>プレート {r.plate_count}</span>
-              </div>
-            </div>
-
-          ))}
         </div>
 
       )}
@@ -314,6 +361,7 @@ export default function RankingPage() {
                   border: "1px solid #f0f0f0",
                   borderRadius: 12,
                   padding: 10,
+                  background:"linear-gradient(#ffffff, #f3bf88)",
                 }}
               >
                 <div style={{ fontWeight: 900 }}>

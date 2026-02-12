@@ -519,7 +519,7 @@ input {
 }
 
 .summaryValue {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
   line-height: 1.1;
   color: var(--summary-val);
@@ -528,6 +528,13 @@ input {
 
 .summarySub {
   font-size: 12px;
+  font-weight: 700;
+  margin-left: 6px;
+  opacity: 5;
+}
+
+.summarySub2 {
+  font-size: 18px;
   font-weight: 700;
   margin-left: 6px;
   opacity: 5;

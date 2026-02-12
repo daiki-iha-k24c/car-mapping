@@ -103,7 +103,7 @@ export default function UserSummaryBar({regions, refreshKey = 0  }: Props) {
             <div className="summaryLabel">登録地域</div>
             <div className="summaryValue">
               {completedRegions} / {totalRegions}
-              <span className="summarySub">（{pct}%）</span>
+              <span className="summarySub2">（{pct}%）</span>
             </div>
           </div>
 
@@ -114,7 +114,7 @@ export default function UserSummaryBar({regions, refreshKey = 0  }: Props) {
             <div className="summaryValue">
               {totalPlates}
               <span className="summarySub">枚</span>
-              <span className="summaryValue">
+              <span className="summarySub2">
                 （{pointsLoading ? "…" : `${totalPoints}pt`}）
               </span>
             </div>

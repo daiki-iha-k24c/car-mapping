@@ -367,17 +367,6 @@ export default function HomePage() {
                 </Link>
 
 
-                <button
-                  className="menu-item"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setHelpOpen(true);
-                  }}
-                >
-                  ⓘ 遊び方
-                </button>
-
-
               </div>
             )}
           </div>
