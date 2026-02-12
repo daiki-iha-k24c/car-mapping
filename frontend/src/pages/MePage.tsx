@@ -52,7 +52,7 @@ function publicUrlFromAvatarValue(avatarUrlOrPath: string | null) {
 
 async function uploadAvatarAndSaveProfile(userId: string, file: File) {
   // 1) 拡張子をpng固定でOK（画像加工してるならなおさら）
-  const path = `${userId}.png`;
+  const path = `${userId}/avatar.png`; // ✅ 自分フォルダ配下
 
   // 2) upload（同名上書き）
   const { error: upErr } = await supabase.storage
@@ -345,7 +345,7 @@ export default function MePage() {
         みんなの記録・ランキングで表示される名前です
       </div>
 
-      <ThemePicker/>
+      <ThemePicker />
 
       {loading ? (
         <div>読み込み中...</div>

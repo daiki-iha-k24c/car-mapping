@@ -51,30 +51,20 @@ function guessExtFromMime(mime: string) {
   return "jpg";
 }
 
-async function uploadAvatarAndSaveProfile(userId: string, file: File) {
-  // 1) 拡張子をpng固定でOK（画像加工してるならなおさら）
-  const path = `${userId}.png`;
+async function uploadAvatar(userId: string, file: File) {
+  const path = `${userId}/avatar.png`;
 
-  // 2) upload（同名上書き）
   const { error: upErr } = await supabase.storage
     .from("avatars")
     .upload(path, file, {
       upsert: true,
       contentType: file.type || "image/png",
-      cacheControl: "60", // ← 後で説明（キャッシュ対策）
+      cacheControl: "60",
     });
 
   if (upErr) throw upErr;
 
-  // 3) profiles更新：avatar_url に「パス」を入れる
-  const { error: pErr } = await supabase
-    .from("profiles")
-    .update({ avatar_url: path })
-    .eq("user_id", userId);
-
-  if (pErr) throw pErr;
-
-  return path;
+  return path; // ✅ ここで path だけ返す
 }
 
 
@@ -172,20 +162,20 @@ export default function OnboardingPage() {
       // 1) avatar を storage にアップ（選ばれている時だけ）
       let avatarPath: string | null = null;
       if (avatarFile) {
-        avatarPath = await withTimeout(uploadAvatarAndSaveProfile(userId, avatarFile), 12000);
+        avatarPath = await withTimeout(uploadAvatar(userId, avatarFile), 12000);
       }
 
-      // 2) profiles 保存（avatar_url には storage のパスを入れる）
       const q = supabase
         .from("profiles")
         .upsert({
           user_id: userId,
           username: u,
-          avatar_url: avatarPath, // ✅ storage path
+          avatar_url: avatarPath, // ✅ path保存
           updated_at: new Date().toISOString(),
         })
         .select("username")
         .maybeSingle();
+
 
       const { error } = await withTimeout(asPromise<{ data: any; error: any }>(q), 8000);
 
