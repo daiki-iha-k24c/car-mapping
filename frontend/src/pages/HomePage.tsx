@@ -51,14 +51,7 @@ export default function HomePage() {
   const [summaryRefresh, setSummaryRefresh] = useState(0);
 
 
-  {
-    !loading && !username && (
-      <div className="card" style={{ padding: 12, marginBottom: 12 }}>
-        ユーザーネームが未設定です。
-        <button className="btn" onClick={() => navigate("/Onboarding")}>設定する</button>
-      </div>
-    )
-  }
+
 
 
   // ✅ ホームから開く登録モーダル
@@ -96,32 +89,39 @@ export default function HomePage() {
   // ✅ 地図達成の記録
 
   // 1) セッション確認 + username確認 → OKなら userId 確定
+  // 1) ログイン & username確認 → 未設定なら Onboarding
   useEffect(() => {
+    if (loading) return; // UserContextの復元待ち
+
+    // ✅ A：未ログインならログインへ（匿名ログインはしない）
+    if (!userId) {
+      navigate("/login");
+      return;
+    }
+
     (async () => {
-      let { data: sess } = await supabase.auth.getSession();
-      let user = sess.session?.user;
-
-      if (!user) {
-        const res = await supabase.auth.signInAnonymously();
-        if (res.error) throw res.error;
-        user = res.data.user!;
-      }
-
       const { data: profile, error } = await supabase
         .from("profiles")
         .select("username")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .maybeSingle();
+      const { data } = await supabase.auth.getSession();
+      console.log("SESSION NOW:", data.session);
 
-      if (error) throw error;
+
+      if (error) {
+        console.error("profiles read error:", error);
+        // 無限ロードにせず、必要ならメッセージ出す（最低限 console でOK）
+        return;
+      }
 
       if (!profile?.username) {
         navigate("/Onboarding");
         return;
       }
+    })();
+  }, [loading, userId, navigate]);
 
-    })().catch(console.error);
-  }, [navigate]);
 
   // 2) userIdが確定したら localStorage をロード
   useEffect(() => {
@@ -441,6 +441,14 @@ export default function HomePage() {
           ナンバープレートを登録
         </button>
       </div>
+      {
+        !loading && !username && (
+          <div className="card" style={{ padding: 12, marginBottom: 12 }}>
+            ユーザーネームが未設定です。
+            <button className="btn" onClick={() => navigate("/Onboarding")}>設定する</button>
+          </div>
+        )
+      }
     </div >
   );
 }

@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useUser } from "../context/UserContext";
 import LoadingPlate from "../components/LoadingPlate";
 
@@ -8,12 +8,15 @@ export default function ProtectedRoute({ children }: { children: JSX.Element }) 
   const loc = useLocation();
   const missingSinceRef = useRef<number | null>(null);
 
+  // 1) まずはセッション復元待ち
   if (authChecking) return <LoadingPlate />;
-  if (profileStatus === "loading") return <LoadingPlate />;
 
+  // 2) 復元が終わって userId が無いなら未ログイン確定 → login
   if (!userId) return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
 
-  // ✅ missing が “継続” したときだけ onboarding へ
+  // 3) ここから先は「ログイン済み」の人だけに適用してOK
+  if (profileStatus === "loading") return <LoadingPlate />;
+
   if (profileStatus === "missing") {
     if (missingSinceRef.current == null) missingSinceRef.current = Date.now();
     const elapsed = Date.now() - missingSinceRef.current;
@@ -39,3 +42,4 @@ export default function ProtectedRoute({ children }: { children: JSX.Element }) 
 
   return children;
 }
+

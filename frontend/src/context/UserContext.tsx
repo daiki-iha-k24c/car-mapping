@@ -277,17 +277,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.warn("auth bootstrap timeout/error:", e);
 
-        // ✅ 重要：ここでも userId を落とさない
-        // ローカル復元が無い場合だけ未ログイン扱い
-        const localUid = readLocalSessionUserId();
-        if (!localUid) {
+        function isInvalidRefreshToken(err: any) {
+          const msg = String(err?.message ?? err);
+          return msg.includes("Invalid Refresh Token") || msg.includes("Refresh Token Not Found");
+        }
+
+
+        // ✅ refresh token が死んでたら、残骸を消して「未ログイン」に揃える
+        if (isInvalidRefreshToken(e)) {
+          try {
+            const storageKey = (supabase as any)?.auth?.storageKey as string | undefined;
+            if (storageKey) localStorage.removeItem(storageKey);
+            // プロフィールキャッシュも消す（任意だけどおすすめ）
+            // localStorage.removeItem(`cm_profile_cache_v1:${readLocalSessionUserId() ?? ""}`);
+            await supabase.auth.signOut();
+          } catch { }
           setUserId(null);
           setUsername(null);
           setAvatarUrl(null);
         }
 
         setProfileStatus((prev) => (prev === "ready" ? "ready" : "loading"));
-      } finally {
+      }
+      finally {
         if (!alive) return;
         setAuthChecking(false); // ✅ 追加：復元期間終了
         setLoading(false);
