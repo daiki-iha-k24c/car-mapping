@@ -18,9 +18,20 @@ export default function SerialCollectionPage() {
       setLoading(true);
       setError(null);
 
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+
+      if (!uid) {
+        setError("ログインが必要です");
+        setRows([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("user_serial_collection_v2")
-        .select("serial4, first_plate_svg");
+        .select("serial4, first_plate_svg")
+        .eq("user_id", uid);
 
 
       if (error) {
@@ -33,6 +44,7 @@ export default function SerialCollectionPage() {
       setLoading(false);
     })();
   }, []);
+
 
   const achieved = rows.length;
   const ratePct = useMemo(() => {

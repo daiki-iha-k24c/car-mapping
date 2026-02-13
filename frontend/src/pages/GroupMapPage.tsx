@@ -186,7 +186,7 @@ export default function GroupMapPage() {
         const allOk: Record<string, boolean> = {};
 
         for (const r of PLATE_REGIONS) {
-            const prefName = r.prefecture;
+            const prefName = normPref(r.prefecture);
             const rid = regionIdFromPlate(r.prefecture, r.name);
             const p = progressByRegionId[rid] ?? 0;
 
@@ -207,7 +207,7 @@ export default function GroupMapPage() {
             // すでに地図の色が出てるならこのままでOK
             let status: PrefStatus;
             if (done === 0) status = "none" as PrefStatus;
-            else if (allOk[prefName] && total > 0) status = "all" as PrefStatus;
+            else if (allOk[prefName] && total > 0) status = "complete" as PrefStatus;
             else status = "partial" as PrefStatus;
 
             out[prefName] = { status, done, total };
@@ -576,13 +576,13 @@ export default function GroupMapPage() {
                 </div>
 
             )}
-                <PlatePeekModal
-                    open={peekOpen}
-                    plate={peekPlate}
-                    onClose={() => setPeekOpen(false)}
-                />
+            <PlatePeekModal
+                open={peekOpen}
+                plate={peekPlate}
+                onClose={() => setPeekOpen(false)}
+            />
 
-        
+
 
         </div>
 

@@ -308,25 +308,29 @@ export default function HomePage() {
             </button>
           )}
 
-          <div className="actions-mobile">
-            <button
-              className="btn"
-              aria-label="メニュー"
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              ☰
-            </button>
+<div className="actions-mobile">
+  <button
+    className="btn"
+    aria-label="メニュー"
+    onClick={() => setMenuOpen((v) => !v)}
+  >
+    ☰
+  </button>
 
-            {menuOpen && (
-              <div className="menu-popover" role="menu">
-                {/* <Link
-                  to="/regions"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  🗾地域一覧
-                </Link> */}
+  {menuOpen && (
+    <>
+      {/* ✅ 外側クリックで閉じるためのオーバーレイ */}
+      <div
+        className="menu-overlay"
+        onClick={() => setMenuOpen(false)}
+      />
 
+      {/* ✅ メニュー本体（ここをクリックしても閉じない） */}
+      <div
+        className="menu-popover"
+        role="menu"
+        onClick={(e) => e.stopPropagation()}
+      >
                 <Link
                   to="/ranking"
                   className="menu-item"
@@ -368,7 +372,9 @@ export default function HomePage() {
 
 
               </div>
+             </>
             )}
+            
           </div>
         </div>
       </div>

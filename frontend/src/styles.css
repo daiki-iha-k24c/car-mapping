@@ -511,7 +511,7 @@ input {
 }
 
 .summaryLabel {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   opacity: 5;
   color: var(--summary-cl);
@@ -519,7 +519,7 @@ input {
 }
 
 .summaryValue {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.1;
   color: var(--summary-val);
@@ -936,4 +936,18 @@ body[data-theme="night"] .seg.active {
   pointer-events: auto;
   background: #fff;
   /* 完全に覆う */
+}
+
+.menu-overlay{
+  position: fixed;
+  inset: 0;
+  background: transparent; /* 暗くしたいなら rgba(0,0,0,0.25) */
+  z-index: 999;           /* popoverより下 */
+}
+
+.menu-popover{
+  position: fixed; /* これ大事（overlayと別レイヤーにする） */
+  right: 12px;
+  top: 56px;
+  z-index: 1000;   /* overlayより上 */
 }
