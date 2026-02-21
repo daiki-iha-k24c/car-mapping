@@ -308,73 +308,73 @@ export default function HomePage() {
             </button>
           )}
 
-<div className="actions-mobile">
-  <button
-    className="btn"
-    aria-label="メニュー"
-    onClick={() => setMenuOpen((v) => !v)}
-  >
-    ☰
-  </button>
+          <div className="actions-mobile">
+            <button
+              className="btn"
+              aria-label="メニュー"
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              ☰
+            </button>
 
-  {menuOpen && (
-    <>
-      {/* ✅ 外側クリックで閉じるためのオーバーレイ */}
-      <div
-        className="menu-overlay"
-        onClick={() => setMenuOpen(false)}
-      />
-
-      {/* ✅ メニュー本体（ここをクリックしても閉じない） */}
-      <div
-        className="menu-popover"
-        role="menu"
-        onClick={(e) => e.stopPropagation()}
-      >
-                <Link
-                  to="/ranking"
-                  className="menu-item"
+            {menuOpen && (
+              <>
+                {/* ✅ 外側クリックで閉じるためのオーバーレイ */}
+                <div
+                  className="menu-overlay"
                   onClick={() => setMenuOpen(false)}
+                />
+
+                {/* ✅ メニュー本体（ここをクリックしても閉じない） */}
+                <div
+                  className="menu-popover"
+                  role="menu"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  👑ランキング
-                </Link>
+                  <Link
+                    to="/ranking"
+                    className="menu-item"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    👑ランキング
+                  </Link>
 
-                <Link
-                  to="/group"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  🗾みんなで埋める日本地図
-                </Link>
+                  <Link
+                    to="/group"
+                    className="menu-item"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🗾みんなで埋める日本地図
+                  </Link>
 
-                <Link
-                  to="/collection"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  🗾ナンバーコレクション(個人)
-                </Link>
+                  <Link
+                    to="/collection"
+                    className="menu-item"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🗾ナンバーコレクション(個人)
+                  </Link>
 
-                <Link
-                  to="/serial-collection/global"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  🌐 ナンバーコレクション(みんな)
-                </Link>
+                  <Link
+                    to="/serial-collection/global"
+                    className="menu-item"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    🌐 ナンバーコレクション(みんな)
+                  </Link>
 
-                <Link
-                  to="/friends"
-                  className="menu-item"
-                  onClick={() => setMenuOpen(false)}>
-                  👥 フレンド
-                </Link>
+                  <Link
+                    to="/friends"
+                    className="menu-item"
+                    onClick={() => setMenuOpen(false)}>
+                    👥 フレンド
+                  </Link>
 
 
-              </div>
-             </>
+                </div>
+              </>
             )}
-            
+
           </div>
         </div>
       </div>

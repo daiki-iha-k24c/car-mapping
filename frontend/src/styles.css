@@ -113,6 +113,8 @@ body[data-theme="night"] {
   --header-title-shadow: none;
 }
 
+
+
 .mapCard {
   position: relative;
   border-radius: 18px;

@@ -362,10 +362,14 @@ export default function GroupMapPage() {
                             padding: 16,
                             maxHeight: "82vh",
                             overflow: "auto",
+
                             background: "#fff",
-                            color: "black",
+                            color: "#111827",
+
+                            // ✅ 夜テーマの変数をここで打ち消す
+                            ["--text" as any]: "#111827",
+                            ["--muted" as any]: "rgba(17, 24, 39, 0.65)",
                         }}
-                        onClick={(e) => e.stopPropagation()}
                     >
                         <div className="row spread" style={{ marginBottom: 8 }}>
                             <div>
@@ -441,7 +445,7 @@ export default function GroupMapPage() {
                                                 </div>
 
                                                 {r.reading && (
-                                                    <div className="small" style={{ opacity: 0.7 }}>
+                                                    <div className="small" style={{ opacity: 0.8 }}>
                                                         {r.reading}
                                                     </div>
                                                 )}
