@@ -5,7 +5,9 @@ import { addPlateCloudWithResult } from "../storage/platesCloud";
 import { renderPlateSvg } from "../svg/renderPlateSvg";
 import { normalizeSerial4 } from "../lib/serial4";
 import { supabase } from "../lib/supabaseClient";
-import { RegisterResultPopup, type RegisterResult } from "../components/RegisterResultPopup";
+// PlateRegisterModal.tsx
+import { RegisterResultPopup } from "../components/RegisterResultPopup";
+import type { RegisterResult } from "../storage/platesCloud"; // ✅ こっちから
 
 export type PlateRegisterModalProps = {
   open: boolean;

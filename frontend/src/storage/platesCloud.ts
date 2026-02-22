@@ -60,6 +60,7 @@ export type RegisterResult = {
   regionAlreadyRegistered: boolean;
   regionPlateIndex: number;
   totalRegions: number;
+  totalPlates: number;
 
   serialAlreadyInMyCollection: boolean;
   serialMyAddedNow: boolean;
@@ -75,7 +76,10 @@ export type RegisterResult = {
 };
 
 
-export async function addPlateCloudWithResult(userId: string, plate: Plate): Promise<RegisterResult> {
+export async function addPlateCloudWithResult(
+  userId: string,
+  plate: Plate
+): Promise<RegisterResult> {
   // ✅ 沖縄県は登録不可
   const pref = (plate.regionId ?? "").split(":")[0];
   if (isExcludedPrefecture(pref)) {
@@ -90,7 +94,6 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
   // --------------------------
   // 0) 事前判定（個人）
   // --------------------------
-  // この地域の既登録？（platesに1枚でもあれば既登録扱い）
   const { count: regionCountBefore, error: rbErr } = await supabase
     .from("plates")
     .select("id", { count: "exact", head: true })
@@ -100,7 +103,6 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
 
   const regionAlreadyRegistered = (regionCountBefore ?? 0) > 0;
 
-  // マイナンバーコレクション：すでに登録済み？
   const { data: mySerialBefore, error: msbErr } = await supabase
     .from("user_serial_collection")
     .select("serial4")
@@ -111,17 +113,15 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
 
   const serialAlreadyInMyCollection = !!mySerialBefore;
 
-  // グローバルナンバーコレクション：すでにある？
   const { data: globalSerialBefore, error: gsbErr } = await supabase
     .from("global_serial_collection")
     .select("serial4")
     .eq("serial4", serial4)
     .maybeSingle();
-  if (gsbErr) {
-    // 読めないRLSならここで落ちるので、落としたくないなら握りつぶすのもあり
-    // 今回は落とさず「不明」扱いにしたいので try/catch にしてもOK
-    throw gsbErr;
-  }
+
+  // RLSで読めない場合に落としたくないならここは握りつぶしも可
+  if (gsbErr) throw gsbErr;
+
   const serialAlreadyGlobal = !!globalSerialBefore;
 
   // --------------------------
@@ -163,7 +163,6 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
   const platePoints = rr?.points ?? 40;
   const rarityLevel = rr?.rarity_level ?? 5;
 
-  // score_events insert（固定）
   const { error: seErr } = await supabase.from("score_events").insert({
     user_id: userId,
     plate_id: plateId,
@@ -182,9 +181,7 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
       user_id: userId,
       serial4,
       first_plate_svg: savedSvg,
-      // first_seen_at は DEFAULT now()
     });
-    // 競合したら「誰かの並行登録」なので追加できなくてもOK
     if (!uscErr) serialMyAddedNow = true;
   }
 
@@ -196,11 +193,7 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
     const { error: gErr } = await supabase
       .from("global_serial_collection")
       .upsert(
-        {
-          serial4,
-          first_user_id: userId,
-          first_plate_svg: savedSvg,
-        },
+        { serial4, first_user_id: userId, first_plate_svg: savedSvg },
         { onConflict: "serial4", ignoreDuplicates: true }
       );
 
@@ -221,8 +214,16 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
 
   const regionPlateIndex = Math.max(1, regionCountAfter ?? 1);
 
-  // 総登録地域数（distinct）
-  // Supabaseのクエリだけでdistinct countがやりにくいので一旦Setで集計（登録数が多くても現実的）
+  // ✅ 総登録プレート数（これが欲しいやつ！）
+  const { count: totalPlatesCount, error: tpCountErr } = await supabase
+    .from("plates")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (tpCountErr) throw tpCountErr;
+
+  const totalPlates = totalPlatesCount ?? 0;
+
+  // （残しておくなら）総登録地域数（distinct）
   const { data: allRegions, error: arErr } = await supabase
     .from("plates")
     .select("region_id")
@@ -238,7 +239,10 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
     .eq("user_id", userId);
   if (tpErr) throw tpErr;
 
-  const totalPoints = (ptsRows ?? []).reduce((sum: number, r: any) => sum + (Number(r.points) || 0), 0);
+  const totalPoints = (ptsRows ?? []).reduce(
+    (sum: number, r: any) => sum + (Number(r.points) || 0),
+    0
+  );
 
   // --------------------------
   // 6) グローバル地域判定（RLS次第で読めない可能性あり）
@@ -249,10 +253,12 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
     const { count, error } = await supabase
       .from("plates")
       .select("id", { count: "exact", head: true })
-      .eq("region_id", regionId); // user_id なし＝全ユーザー
+      .eq("region_id", regionId);
     if (error) throw error;
-    regionAlreadyRegisteredGlobal = (count ?? 0) > 1; // 自分の今回の1件が入るので >1 を既に誰かいた扱いに
-  } catch (e) {
+
+    // 自分の今回の1件が含まれるので >1 を「既に誰かがいた」扱いに
+    regionAlreadyRegisteredGlobal = (count ?? 0) > 1;
+  } catch {
     globalRegionKnown = false;
     regionAlreadyRegisteredGlobal = false;
   }
@@ -266,6 +272,7 @@ export async function addPlateCloudWithResult(userId: string, plate: Plate): Pro
     regionAlreadyRegistered,
     regionPlateIndex,
     totalRegions,
+    totalPlates, // ✅ 追加
 
     serialAlreadyInMyCollection,
     serialMyAddedNow,
