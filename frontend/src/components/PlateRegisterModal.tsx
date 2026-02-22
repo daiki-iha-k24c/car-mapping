@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Region } from "../lib/region";
 import type { Plate, PlateColor } from "../storage/plates";
-import { addPlateCloud } from "../storage/platesCloud";
+import { addPlateCloudWithResult } from "../storage/platesCloud";
 import { renderPlateSvg } from "../svg/renderPlateSvg";
 import { normalizeSerial4 } from "../lib/serial4";
 import { supabase } from "../lib/supabaseClient";
+import { RegisterResultPopup, type RegisterResult } from "../components/RegisterResultPopup";
 
 export type PlateRegisterModalProps = {
   open: boolean;
@@ -234,12 +235,15 @@ export default function PlateRegisterModal({
 }: PlateRegisterModalProps) {
   // ✅ hooksは必ずここに集約（順番固定）
   const [v, setV] = useState<FormState>(initialState());
-  const [done, setDone] = useState(false);
+  // const [done, setDone] = useState(false);
   const [dupMsg, setDupMsg] = useState<string>("");
 
   const [saving, setSaving] = useState(false);
-  const [okMsg, setOkMsg] = useState<string>("");
+  // const [okMsg, setOkMsg] = useState<string>("");
   const [tried, setTried] = useState(false);
+
+  const [doneOpen, setDoneOpen] = useState(false);
+  const [doneResult, setDoneResult] = useState<RegisterResult | null>(null);
 
   // ✅ 画像
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -308,18 +312,18 @@ export default function PlateRegisterModal({
 
   const closeAll = () => {
     setV(initialState());
-    setDone(false);
     setSaving(false);
     setTried(false);
     setDupMsg("");
-    setOkMsg("");
     setPhotoFile(null);
     setPhotoPreview("");
+    setDoneOpen(false);
+    setDoneResult(null);
     onClose();
   };
 
-  type SubmitState = "idle" | "saving" | "done";
-  const submitState: SubmitState = done ? "done" : saving ? "saving" : "idle";
+  type SubmitState = "idle" | "saving";
+  const submitState: SubmitState = saving ? "saving" : "idle";
 
   const submitStyleMap: Record<SubmitState, React.CSSProperties> = {
     idle: {
@@ -331,11 +335,6 @@ export default function PlateRegisterModal({
       background: "#60a5fa",
       boxShadow: "0 6px 16px rgba(96,165,250,0.35)",
       cursor: "wait",
-    },
-    done: {
-      background: "#10b981",
-      boxShadow: "0 6px 16px rgba(16,185,129,0.35)",
-      cursor: "default",
     },
   };
 
@@ -357,111 +356,93 @@ export default function PlateRegisterModal({
   if (!open) return null;
 
   const submit = async () => {
-    if (done || saving) return;
+  if (saving) return;
 
-    // ✅ まず tried を立てる（押したことを記録）
-    setTried(true);
+  setTried(true);
 
-    // ✅ 条件不足なら押下しても何もしない（メッセージだけ出したい場合はここでdupMsg）
-    if (!canSubmit) {
-      if (!photoFile) setDupMsg("画像は必須です。プレート写真を選択してください。");
-      return;
-    }
+  if (!canSubmit) {
+    if (!photoFile) setDupMsg("画像は必須です。プレート写真を選択してください。");
+    return;
+  }
 
-    setSaving(true);
-    setDupMsg("");
-    setOkMsg("");
+  setSaving(true);
+  setDupMsg("");
 
-    // canSubmit に userId 入ってるけど念のため
-    if (!userId) {
-      setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
-      setSaving(false);
-      return;
-    }
+  if (!userId) {
+    setDupMsg("ログイン確認中です。少し待ってからもう一度試してください。");
+    setSaving(false);
+    return;
+  }
 
-    const serialValue = serialForSave(v.serialRaw);
-    if (!serialValue) {
-      setSaving(false);
-      return;
-    }
+  const serialValue = serialForSave(v.serialRaw);
+  if (!serialValue) {
+    setSaving(false);
+    return;
+  }
 
-    const color = v.color as PlateColor;
+  const color = v.color as PlateColor;
 
-    const svg = fixSvgViewBox(
-      renderPlateSvg({
-        regionName: regionMatch?.name ?? v.regionName.trim(),
-        classNumber: v.classNumber,
-        kana: kanaValue,
-        serial: serialValue,
-        color,
-      })
-    );
-
-    const plateId = crypto.randomUUID();
-    const capturedAtIso = v.capturedAt ? new Date(`${v.capturedAt}T00:00:00`).toISOString() : null;
-
-    const plate: Plate = {
-      id: plateId,
-      regionId: regionMatch?.id ?? v.regionId,
+  const svg = fixSvgViewBox(
+    renderPlateSvg({
+      regionName: regionMatch?.name ?? v.regionName.trim(),
       classNumber: v.classNumber,
       kana: kanaValue,
       serial: serialValue,
       color,
-      renderSvg: svg,
-      createdAt: new Date().toISOString(),
-      capturedAt: capturedAtIso,
+    })
+  );
+
+  const plateId = crypto.randomUUID();
+  const capturedAtIso = v.capturedAt
+    ? new Date(`${v.capturedAt}T00:00:00`).toISOString()
+    : null;
+
+  const plate: Plate = {
+    id: plateId,
+    regionId: regionMatch?.id ?? v.regionId,
+    classNumber: v.classNumber,
+    kana: kanaValue,
+    serial: serialValue,
+    color,
+    renderSvg: svg,
+    createdAt: new Date().toISOString(),
+    capturedAt: capturedAtIso,
+  };
+
+  try {
+    const regionId = `${regionMatch!.pref}:${regionMatch!.name}`;
+
+    const photoUrl = await uploadPlateImage({
+      userId,
+      plateId,
+      file: photoFile!,
+    });
+
+    const plateFixed = {
+      ...plate,
+      regionId,
+      regionName: regionMatch!.name,
+      prefName: regionMatch!.pref,
+      photo_url: photoUrl,
     };
 
-    try {
-      const regionId = `${regionMatch!.pref}:${regionMatch!.name}`;
+    const result = await addPlateCloudWithResult(userId, plateFixed);
 
-      // ✅ 画像は必須なので必ず upload
-      const photoUrl = await uploadPlateImage({
-        userId,
-        plateId,
-        file: photoFile!, // canSubmitで保証
-      });
+    setDoneResult(result);
+    setDoneOpen(true);
 
-      const plateFixed = {
-        ...plate,
-        regionId,
-        regionName: regionMatch!.name,
-        prefName: regionMatch!.pref,
-        photo_url: photoUrl,
-      };
-
-      await addPlateCloud(userId, plateFixed);
-
-      await collectSerialOnce({
-        regionName: regionMatch!.name,
-        classNumber: v.classNumber,
-        kana: kanaValue,
-        serialRaw: v.serialRaw,
-        serialDisplay: serialValue,
-        color,
-      });
-
-      setDone(true);
-      setOkMsg("登録が完了しました ✅");
-
-      // ✅ 即反映
-      onRegistered(regionMatch!.name);
-
-      // ✅ 少し見せてから閉じる
-      setTimeout(() => {
-        closeAll();
-      }, 900);
-    } catch (e: any) {
-      const msg = String(e?.message ?? "");
-      if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
-        setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
-      } else {
-        setDupMsg(msg || "保存に失敗しました");
-      }
-    } finally {
-      setSaving(false);
+    onRegistered(regionMatch!.name);
+  } catch (e: any) {
+    const msg = String(e?.message ?? "");
+    if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+      setDupMsg(`すでに登録済み：${v.regionName} ${v.classNumber} ${v.kana} ${serialValue}`);
+    } else {
+      setDupMsg(msg || "保存に失敗しました");
     }
-  };
+  } finally {
+    setSaving(false);
+  }
+};
 
   // ↓↓↓ ここから先の JSX は、あなたの既存の return をそのまま使ってOK
   // （画像UI、登録ボタン、完了メッセージなど）
@@ -815,53 +796,24 @@ export default function PlateRegisterModal({
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-              {/* ✅ 完了のときだけ：チェックがポンっと出る */}
-              {submitState === "done" && (
-                <span
-                  aria-hidden
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.22)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    animation: "popIn 220ms ease-out",
-                  }}
-                >
-                  <span style={{ fontSize: 16, lineHeight: 1 }}>✓</span>
-                </span>
-              )}
-
               {/* テキスト */}
               <span>
-                {submitState === "idle"
-                  ? "登録"
-                  : submitState === "saving"
-                    ? "保存中…"
-                    : "完了"}
+                {submitState === "idle" ? "登録" : "保存中…"}
               </span>
             </span>
-
-            {/* ✅ 完了時にキラッとする演出（任意だけど気持ちいい） */}
-            {submitState === "done" && (
-              <span
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "40%",
-                  height: "100%",
-                  background: "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0))",
-                  animation: "shine 500ms ease-out",
-                }}
-              />
-            )}
           </button>
         </div>
       </div>
+      <RegisterResultPopup
+        open={doneOpen}
+        result={doneResult}
+        onClose={() => {
+          setDoneOpen(false);
+          // ✅ OK押したら登録モーダルも閉じるならここで closeAll()
+          closeAll();
+        }}
+      />
     </div>
+
   );
 }

@@ -348,7 +348,8 @@ export default function GroupMapPage() {
                         padding: 16,
                         zIndex: 2000,
                     }}
-                    onClick={() => {
+                    onClick={(e) => {
+                        if (e.target !== e.currentTarget) return;
                         setPrefModalOpen(false);
                         setActivePref(null);
                         setOpenRegionId(null);

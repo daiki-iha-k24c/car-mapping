@@ -33,7 +33,13 @@ export async function listPlatesByRegionIdCloud(
   }));
 }
 
-
+function buildNumberLabel(plate: Plate, serial4: string) {
+  // 表示用（好きに整えてOK）
+  const regionName = String(plate.regionId ?? "").split(":")[1] ?? String(plate.regionId ?? "");
+  const classNo = plate.classNumber ?? "";
+  const kana = plate.kana ?? "";
+  return `${regionName} ${classNo} ${kana} ${serial4}`;
+}
 
 
 function toSerial4(v: string) {
@@ -45,26 +51,91 @@ function toSerial4(v: string) {
   return String(clamped).padStart(4, "0");
 }
 
-export async function addPlateCloud(userId: string, plate: Plate) {
-  // ✅ 沖縄県は登録不可（最終防衛ライン）
+export type RegisterResult = {
+  regionId: string;
+  regionName: string;
+  numberLabel: string;
+  serial4: string;
+
+  regionAlreadyRegistered: boolean;
+  regionPlateIndex: number;
+  totalRegions: number;
+
+  serialAlreadyInMyCollection: boolean;
+  serialMyAddedNow: boolean;
+
+  platePoints: number;
+  totalPoints: number;
+
+  globalRegionKnown: boolean;
+  regionAlreadyRegisteredGlobal: boolean;
+
+  serialAlreadyGlobal: boolean;
+  serialGlobalAddedNow: boolean;
+};
+
+
+export async function addPlateCloudWithResult(userId: string, plate: Plate): Promise<RegisterResult> {
+  // ✅ 沖縄県は登録不可
   const pref = (plate.regionId ?? "").split(":")[0];
   if (isExcludedPrefecture(pref)) {
     throw new Error("沖縄県のナンバープレートは登録対象外です");
   }
 
-  // ✅ serial4 を常に 4桁に正規化（global 側のキー不一致防止）
+  const regionId = plate.regionId;
+  const regionName = String(regionId ?? "").split(":")[1] ?? String(regionId ?? "");
   const serial4 = toSerial4(plate.serial);
+  const numberLabel = buildNumberLabel(plate, serial4);
 
-  // --- ① 個人プレート登録（DBに確実に入った render_svg を取得） ---
-  const { data, error } = await supabase
+  // --------------------------
+  // 0) 事前判定（個人）
+  // --------------------------
+  // この地域の既登録？（platesに1枚でもあれば既登録扱い）
+  const { count: regionCountBefore, error: rbErr } = await supabase
+    .from("plates")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("region_id", regionId);
+  if (rbErr) throw rbErr;
+
+  const regionAlreadyRegistered = (regionCountBefore ?? 0) > 0;
+
+  // マイナンバーコレクション：すでに登録済み？
+  const { data: mySerialBefore, error: msbErr } = await supabase
+    .from("user_serial_collection")
+    .select("serial4")
+    .eq("user_id", userId)
+    .eq("serial4", serial4)
+    .maybeSingle();
+  if (msbErr) throw msbErr;
+
+  const serialAlreadyInMyCollection = !!mySerialBefore;
+
+  // グローバルナンバーコレクション：すでにある？
+  const { data: globalSerialBefore, error: gsbErr } = await supabase
+    .from("global_serial_collection")
+    .select("serial4")
+    .eq("serial4", serial4)
+    .maybeSingle();
+  if (gsbErr) {
+    // 読めないRLSならここで落ちるので、落としたくないなら握りつぶすのもあり
+    // 今回は落とさず「不明」扱いにしたいので try/catch にしてもOK
+    throw gsbErr;
+  }
+  const serialAlreadyGlobal = !!globalSerialBefore;
+
+  // --------------------------
+  // 1) plates insert（render_svg取り出し）
+  // --------------------------
+  const { data: ins, error: insErr } = await supabase
     .from("plates")
     .insert({
       id: plate.id,
       user_id: userId,
-      region_id: plate.regionId,
+      region_id: regionId,
       class_number: plate.classNumber,
       kana: plate.kana,
-      serial: serial4, // ← plates 側も 4桁で統一（表示用の "・・・" はUIだけ）
+      serial: serial4,
       color: plate.color,
       render_svg: plate.renderSvg,
       photo_url: (plate as any).photo_url ?? null,
@@ -74,40 +145,53 @@ export async function addPlateCloud(userId: string, plate: Plate) {
     .select("id, render_svg")
     .single();
 
-  if (error) throw error;
+  if (insErr) throw insErr;
 
-  // ✅ ここから加点（登録時点数固定）
-  // region_id は plates と同じ "都道府県:地域" を使う
-  const regionId = plate.regionId;
+  const plateId = ins?.id ?? plate.id;
+  const savedSvg = ins?.render_svg ?? null;
 
-  // rarity / points 取得
+  // --------------------------
+  // 2) rarity / points
+  // --------------------------
   const { data: rr, error: rrErr } = await supabase
     .from("region_rarity_current")
     .select("rarity_level, points")
     .eq("region_id", regionId)
     .maybeSingle();
-
   if (rrErr) throw rrErr;
 
-  // 見つからない時の保険（通常は起きない想定）
+  const platePoints = rr?.points ?? 40;
   const rarityLevel = rr?.rarity_level ?? 5;
-  const points = rr?.points ?? 40;
 
-  // score_events へ記録（固定）
-  const { error: seErr } = await supabase
-    .from("score_events")
-    .insert({
-      user_id: userId,
-      plate_id: data?.id ?? plate.id, // ✅ plates.id を固定で紐付け
-      region_id: regionId,
-      rarity_level: rarityLevel,
-      points,
-    });
+  // score_events insert（固定）
+  const { error: seErr } = await supabase.from("score_events").insert({
+    user_id: userId,
+    plate_id: plateId,
+    region_id: regionId,
+    rarity_level: rarityLevel,
+    points: platePoints,
+  });
   if (seErr) throw seErr;
 
-  const savedSvg = data?.render_svg ?? null;
+  // --------------------------
+  // 3) user_serial_collection（自分用コレクション）
+  // --------------------------
+  let serialMyAddedNow = false;
+  if (!serialAlreadyInMyCollection) {
+    const { error: uscErr } = await supabase.from("user_serial_collection").insert({
+      user_id: userId,
+      serial4,
+      first_plate_svg: savedSvg,
+      // first_seen_at は DEFAULT now()
+    });
+    // 競合したら「誰かの並行登録」なので追加できなくてもOK
+    if (!uscErr) serialMyAddedNow = true;
+  }
 
-  // --- ② みんなのナンバーコレクション（先着1名のみ・SVG込み） ---
+  // --------------------------
+  // 4) global_serial_collection（先着1名のみ）
+  // --------------------------
+  let serialGlobalAddedNow = false;
   if (savedSvg) {
     const { error: gErr } = await supabase
       .from("global_serial_collection")
@@ -120,16 +204,81 @@ export async function addPlateCloud(userId: string, plate: Plate) {
         { onConflict: "serial4", ignoreDuplicates: true }
       );
 
-    if (gErr) {
-      console.warn("global_serial_collection upsert failed:", gErr);
-    }
-  } else {
-    console.warn("render_svg is empty. skip global_serial_collection upsert.");
+    if (!gErr && !serialAlreadyGlobal) serialGlobalAddedNow = true;
+    if (gErr) console.warn("global_serial_collection upsert failed:", gErr);
   }
 
-  // ✅ 最後に返す
-  return { points, rarityLevel };
+  // --------------------------
+  // 5) 登録後の集計
+  // --------------------------
+  // この地域の〇枚目（登録後）
+  const { count: regionCountAfter, error: raErr } = await supabase
+    .from("plates")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("region_id", regionId);
+  if (raErr) throw raErr;
 
+  const regionPlateIndex = Math.max(1, regionCountAfter ?? 1);
+
+  // 総登録地域数（distinct）
+  // Supabaseのクエリだけでdistinct countがやりにくいので一旦Setで集計（登録数が多くても現実的）
+  const { data: allRegions, error: arErr } = await supabase
+    .from("plates")
+    .select("region_id")
+    .eq("user_id", userId);
+  if (arErr) throw arErr;
+
+  const totalRegions = new Set((allRegions ?? []).map((r: any) => r.region_id)).size;
+
+  // 総ポイント
+  const { data: ptsRows, error: tpErr } = await supabase
+    .from("score_events")
+    .select("points")
+    .eq("user_id", userId);
+  if (tpErr) throw tpErr;
+
+  const totalPoints = (ptsRows ?? []).reduce((sum: number, r: any) => sum + (Number(r.points) || 0), 0);
+
+  // --------------------------
+  // 6) グローバル地域判定（RLS次第で読めない可能性あり）
+  // --------------------------
+  let globalRegionKnown = true;
+  let regionAlreadyRegisteredGlobal = false;
+  try {
+    const { count, error } = await supabase
+      .from("plates")
+      .select("id", { count: "exact", head: true })
+      .eq("region_id", regionId); // user_id なし＝全ユーザー
+    if (error) throw error;
+    regionAlreadyRegisteredGlobal = (count ?? 0) > 1; // 自分の今回の1件が入るので >1 を既に誰かいた扱いに
+  } catch (e) {
+    globalRegionKnown = false;
+    regionAlreadyRegisteredGlobal = false;
+  }
+
+  return {
+    regionId,
+    regionName,
+    numberLabel,
+    serial4,
+
+    regionAlreadyRegistered,
+    regionPlateIndex,
+    totalRegions,
+
+    serialAlreadyInMyCollection,
+    serialMyAddedNow,
+
+    platePoints,
+    totalPoints,
+
+    globalRegionKnown,
+    regionAlreadyRegisteredGlobal,
+
+    serialAlreadyGlobal,
+    serialGlobalAddedNow,
+  };
 }
 
 
