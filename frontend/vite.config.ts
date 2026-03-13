@@ -7,13 +7,31 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "prompt",
-      manifest: false,
-      workbox: {
-        navigateFallback: "/index.html",
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
-      },
-    }),
-  ],
+      includeAssets: [
+        "favicon.ico",
+        "apple-touch-icon.png",
+        "masked-icon.svg"
+      ],
+      manifest: {
+        name: "ナンバープレートアプリ",
+        short_name: "ナンプレ",
+        description: "ナンバープレートのコレクションアプリ",
+        theme_color: "#ffffff",
+        background_color: "#ffffff",
+        display: "standalone",
+        icons: [
+          {
+            src: "/pwa-192x192.png",
+            sizes: "192x192",
+            type: "image/png"
+          },
+          {
+            src: "/pwa-512x512.png",
+            sizes: "512x512",
+            type: "image/png"
+          }
+        ]
+      }
+    })
+  ]
 });

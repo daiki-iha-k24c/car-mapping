@@ -22,6 +22,7 @@ import { PlatePeekProvider } from "./context/PlatePeekContext";
 import WaveBackground from "./components/WaveBackground";
 import { useEffect } from "react";
 import { applyThemeFromPref, getThemePref } from "./lib/themePref";
+import UpdateNotice from "./components/UpdateNotice";
 import GroupSerialCollectionPage from "./pages/GroupSerialCollectionPage";
 
 export default function App() {
@@ -35,6 +36,7 @@ export default function App() {
         {/* アプリ本体（波より前面） */}
         <div className="app-root">
           <AppInner />
+          <UpdateNotice />
         </div>
 
       </PlatePeekProvider>
