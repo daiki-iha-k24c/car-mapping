@@ -15,7 +15,6 @@ import SignupPage from "./pages/SignupPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SerialCollectionPage from "./pages/SerialCollectionPage";
 import AppFooter from "./components/AppFooter";
-import WelcomeSplash from "./components/WelcomeSplash";
 import { useUser } from "./context/UserContext";
 import BootGate from "./components/BootGate";
 import { PlatePeekProvider } from "./context/PlatePeekContext";
@@ -27,31 +26,27 @@ import GroupSerialCollectionPage from "./pages/GroupSerialCollectionPage";
 
 export default function App() {
   return (
-    <UserProvider>
-      <PlatePeekProvider>
+    <BrowserRouter>
+      <UserProvider>
+        <PlatePeekProvider>
+          <WaveBackground />
 
-        {/* 🌊 波アニメ背景（全ページ共通・最背面） */}
-        <WaveBackground />
-
-        {/* アプリ本体（波より前面） */}
-        <div className="app-root">
-          <AppInner />
-          <UpdateNotice />
-        </div>
-
-      </PlatePeekProvider>
-    </UserProvider>
+          <div className="app-root">
+            <AppInner />
+            <UpdateNotice />
+          </div>
+        </PlatePeekProvider>
+      </UserProvider>
+    </BrowserRouter>
   );
 }
 
-
 function AppInner() {
   const { authChecking } = useUser();
-   useEffect(() => {
-    // 初回適用
+
+  useEffect(() => {
     applyThemeFromPref();
 
-    // autoの時だけ定期更新（1時間ごと）
     const id = window.setInterval(() => {
       if (getThemePref() === "auto") applyThemeFromPref();
     }, 60 * 60 * 1000);
@@ -60,9 +55,7 @@ function AppInner() {
   }, []);
 
   return (
-
     <BootGate minimumMs={5000} ready={!authChecking}>
-      {/* ここに Routes / Layout / ProtectedRoute 等 */}
       <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
         <div style={{ flex: 1 }}>
           <Routes>
@@ -81,7 +74,6 @@ function AppInner() {
             <Route path="/regions" element={<RegionListPage />} />
             <Route path="/region/:regionId" element={<RegionPage />} />
             <Route path="/region/:regionId/plates" element={<RegionPlatesPage />} />
-
             <Route path="/onboarding" element={<OnboardingPage />} />
 
             <Route
@@ -101,9 +93,8 @@ function AppInner() {
                 </ProtectedRoute>
               }
             />
+
             <Route path="/serial-collection/global" element={<GroupSerialCollectionPage />} />
-
-
             <Route path="/u/:username" element={<UserMapPage />} />
             <Route path="/ranking" element={<RankingPage />} />
             <Route path="/friends" element={<FriendsPage />} />
@@ -121,7 +112,6 @@ function AppInner() {
           </Routes>
         </div>
 
-        {/* ✅ 全ページ共通フッター */}
         <AppFooter />
       </div>
     </BootGate>
