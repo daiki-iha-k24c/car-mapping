@@ -16,8 +16,7 @@ async function fetchVersion(): Promise<VersionInfo | null> {
 
     if (!res.ok) return null;
 
-    const data: VersionInfo = await res.json();
-    return data;
+    return await res.json();
   } catch (error) {
     console.error("version fetch error:", error);
     return null;
@@ -36,13 +35,13 @@ export default function UpdateNotice() {
 
       const seenVersion = localStorage.getItem(STORAGE_KEY);
 
-      // 初回起動時は記録だけして通知しない
+      // 初回起動時は通知せず、記録だけする
       if (!seenVersion) {
         localStorage.setItem(STORAGE_KEY, data.version);
         return;
       }
 
-      // バージョンが変わったら通知を出す
+      // バージョン差分があれば通知
       if (seenVersion !== data.version) {
         setMessage(data.message ?? "新しい内容が反映されています。");
         setLatestVersion(data.version);
@@ -61,7 +60,7 @@ export default function UpdateNotice() {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0, 0, 0, 0.28)",
+        background: "rgba(0,0,0,0.28)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -93,7 +92,6 @@ export default function UpdateNotice() {
             alignItems: "center",
             justifyContent: "center",
             fontSize: 34,
-            boxShadow: "inset 0 2px 8px rgba(255,255,255,0.7)",
           }}
         >
           🚗
@@ -105,7 +103,6 @@ export default function UpdateNotice() {
             fontWeight: 800,
             color: "#111827",
             marginBottom: 8,
-            letterSpacing: "0.02em",
           }}
         >
           アプリを更新しました
@@ -133,7 +130,6 @@ export default function UpdateNotice() {
           }}
           style={{
             border: "none",
-            outline: "none",
             borderRadius: 999,
             padding: "12px 20px",
             minWidth: 140,
@@ -142,7 +138,6 @@ export default function UpdateNotice() {
             fontWeight: 800,
             fontSize: 14,
             cursor: "pointer",
-            boxShadow: "0 8px 18px rgba(59, 130, 246, 0.28)",
           }}
         >
           OK

@@ -1,40 +1,16 @@
 import { APP_VERSION } from "../version";
-import { __doUpdate, __needRefresh } from "../main"; // main.tsxから参照
 
 export default function AppFooter() {
   return (
     <footer
       style={{
-        //height:"100px",
-        padding: "10px 12px",
+        textAlign: "center",
         fontSize: 12,
-        opacity: 0.8,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        borderTop: "1px solid rgba(0,0,0,0.08)",
-        marginTop: 16,
+        opacity: 0.6,
+        padding: "16px 0 24px",
       }}
     >
-
-      <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <span>{APP_VERSION}</span>
-
-        {__needRefresh && __doUpdate && (
-          <button
-            onClick={() => __doUpdate?.()}
-            style={{
-              border: "none",
-              borderRadius: 10,
-              padding: "6px 10px",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            更新
-          </button>
-        )}
-      </span>
+      v{APP_VERSION}
     </footer>
   );
 }
